@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.models import CustomUser, BiometricTemplate
 from apps.biometric.models import AuthenticationLog, SystemLog, write_system_log
 from .models import SystemSettings, ModelMetricsSnapshot
+from apps.biometric.models import DoorAccessLog
 from apps.accounts.forms import UserEditForm
 
 logger = logging.getLogger('apps.operator')
@@ -362,3 +363,32 @@ def system_settings(request):
             messages.error(request, f'Ошибка валидации: {e}')
 
     return render(request, 'operator/settings.html', {'cfg': cfg, 'errors': errors})
+
+
+@operator_required
+def door_logs(request):
+    """Журнал доступа к домофону"""
+    qs = DoorAccessLog.objects.select_related('user').all()
+
+    result_filter = request.GET.get('result', '')
+    if result_filter:
+        qs = qs.filter(result=result_filter)
+
+    # Статистика за сутки
+    from django.utils import timezone
+    from datetime import timedelta
+    last_24h = timezone.now() - timedelta(hours=24)
+    stats_24h = DoorAccessLog.objects.filter(timestamp__gte=last_24h)
+
+    paginator = Paginator(qs, 30)
+    page = paginator.get_page(request.GET.get('page', 1))
+
+    ctx = {
+        'page': page,
+        'result_filter': result_filter,
+        'result_choices': DoorAccessLog.RESULT_CHOICES,
+        'total_24h': stats_24h.count(),
+        'granted_24h': stats_24h.filter(result='granted').count(),
+        'denied_24h': stats_24h.filter(result='denied').count(),
+    }
+    return render(request, 'operator/door_logs.html', ctx)

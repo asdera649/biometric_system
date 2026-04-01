@@ -81,3 +81,37 @@ def write_system_log(level, component, message, user=None, extra_data=None):
         level=level, component=component,
         message=message, user=user, extra_data=extra_data
     )
+
+class DoorAccessLog(models.Model):
+    """Журнал доступа через домофон"""
+    RESULT_GRANTED = 'granted'
+    RESULT_DENIED = 'denied'
+    RESULT_NO_FACE = 'no_face'
+    RESULT_CHOICES = [
+        (RESULT_GRANTED, 'Доступ разрешён'),
+        (RESULT_DENIED, 'Доступ запрещён'),
+        (RESULT_NO_FACE, 'Лицо не обнаружено'),
+    ]
+
+    timestamp = models.DateTimeField('Время', auto_now_add=True, db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='door_logs', verbose_name='Пользователь'
+    )
+    result = models.CharField('Результат', max_length=20, choices=RESULT_CHOICES)
+    recognition_confidence = models.FloatField('Уверенность', default=0.0)
+    quality_score = models.FloatField('Качество кадра', default=0.0)
+    door_opened = models.BooleanField('Дверь открыта', default=False)
+    source_ip = models.GenericIPAddressField('IP сервиса', null=True, blank=True)
+    snapshot = models.ImageField(
+        'Снимок кадра', upload_to='door_snapshots/', blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Доступ к домофону'
+        verbose_name_plural = 'Доступ к домофону'
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        who = self.user.username if self.user else '—'
+        return f'{self.timestamp:%Y-%m-%d %H:%M} | {who} | {self.get_result_display()}'

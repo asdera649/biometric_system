@@ -6,6 +6,8 @@ SECRET_KEY = 'django-insecure-biometric-system-dev-key-change-in-production'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
+DOORBELL_SERVICE_TOKEN = 'токен-домофона'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

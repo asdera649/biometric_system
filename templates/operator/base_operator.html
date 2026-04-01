@@ -12,6 +12,9 @@
   <a href="{% url 'system_logs' %}" class="{% if request.resolver_match.url_name == 'system_logs' %}active{% endif %}">
     <i class="bi bi-terminal"></i> Системный журнал
   </a>
+  <a href="{% url 'door_logs' %}" class="{% if request.resolver_match.url_name == 'door_logs' %}active{% endif %}">
+    <i class="bi bi-door-open"></i> Домофон
+  </a>
   <div class="nav-section" style="margin-top:.5rem">Управление</div>
   <a href="{% url 'users_list' %}" class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}">
     <i class="bi bi-people"></i> Пользователи
