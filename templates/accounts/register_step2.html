@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — Биометрия{% endblock %}
+{% block layout %}
+<div class="auth-page">
+  <div style="width:100%;max-width:560px">
+    <div style="background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden">
+      <div class="auth-header" style="background:linear-gradient(135deg,#059669,#10b981)">
+        <i class="bi bi-camera-fill"></i>
+        <h4 class="mb-0 fw-bold">Регистрация биометрии</h4>
+        <p class="mb-0 opacity-75 small mt-1">{{ user.get_full_name_ru }}</p>
+      </div>
+      <div style="padding:1.5rem 2rem">
+        <div class="stepper mb-3">
+          <div class="step done"><div class="step-num"><i class="bi bi-check"></i></div><div class="step-label">Данные</div></div>
+          <div class="step-line" style="background:#059669"></div>
+          <div class="step active"><div class="step-num">2</div><div class="step-label">Биометрия</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-num">3</div><div class="step-label">Готово</div></div>
+        </div>
+        <div class="alert alert-info small py-2">
+          <i class="bi bi-info-circle me-1"></i>
+          Расположите лицо в овальной рамке. Убедитесь в хорошем освещении.
+        </div>
+        <div style="position:relative;border-radius:12px;overflow:hidden;background:#0f172a;margin-bottom:1rem">
+          <video id="cameraFeed" autoplay playsinline style="width:100%;display:block;max-height:340px;object-fit:cover"></video>
+          <canvas id="snapshot" style="display:none"></canvas>
+          <div class="face-overlay" id="faceOverlay"></div>
+        </div>
+        <!-- Метрики качества -->
+        <div class="row g-2 mb-3" id="metricsRow" style="display:none!important">
+          <div class="col-6">
+            <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+              <div class="text-muted" style="font-size:.7rem">Уверенность детекции</div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="confBar" style="background:#1a56db;width:0%"></div></div>
+              <div class="fw-bold small mt-1" id="confVal">—</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+              <div class="text-muted" style="font-size:.7rem">Качество изображения</div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="qualBar" style="background:#059669;width:0%"></div></div>
+              <div class="fw-bold small mt-1" id="qualVal">—</div>
+            </div>
+          </div>
+        </div>
+        <div id="statusMsg" class="alert py-2 d-none"></div>
+        <div style="display:flex;gap:.75rem">
+          <button id="captureBtn" class="btn btn-success flex-grow-1 py-2 fw-semibold" disabled>
+            <i class="bi bi-camera me-1"></i> Сделать снимок и сохранить
+          </button>
+          <button id="retryBtn" class="btn btn-outline-secondary d-none" onclick="startCamera()">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+        <p class="text-muted small text-center mt-2">
+          <i class="bi bi-lock me-1"></i>Данные хранятся в защищённом хранилище системы
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const USER_ID = "{{ user.pk }}";
+const CSRF = "{{ csrf_token }}";
+let stream = null, capturing = false;
+
+async function startCamera() {
+  try {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+    document.getElementById('cameraFeed').srcObject = stream;
+    document.getElementById('captureBtn').disabled = false;
+    document.getElementById('retryBtn').classList.add('d-none');
+    setStatus('', '');
+  } catch (e) {
+    setStatus('danger', '<i class="bi bi-camera-video-off me-1"></i>Нет доступа к камере: ' + e.message);
+  }
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('statusMsg');
+  if (!msg) { el.classList.add('d-none'); return; }
+  el.className = 'alert alert-' + type + ' py-2';
+  el.innerHTML = msg;
+  el.classList.remove('d-none');
+}
+
+function showMetrics(conf, qual) {
+  const row = document.getElementById('metricsRow');
+  row.style.display = 'flex';
+  row.style.setProperty('display', 'flex', 'important');
+  document.getElementById('confBar').style.width = (conf * 100) + '%';
+  document.getElementById('confVal').textContent = (conf * 100).toFixed(1) + '%';
+  document.getElementById('qualBar').style.width = (qual * 100) + '%';
+  document.getElementById('qualVal').textContent = (qual * 100).toFixed(1) + '%';
+}
+
+document.getElementById('captureBtn').addEventListener('click', async () => {
+  if (capturing) return;
+  capturing = true;
+  const btn = document.getElementById('captureBtn');
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Обработка…';
+  btn.disabled = true;
+
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('snapshot');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+  try {
+    const resp = await fetch('/biometric/api/register/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ user_id: USER_ID, image_data: imageData })
+    });
+    const data = await resp.json();
+    showMetrics(data.detection_confidence || 0, data.quality_score || 0);
+    if (data.success) {
+      document.getElementById('faceOverlay').className = 'face-overlay good';
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      setStatus('success', '<i class="bi bi-check-circle me-1"></i>' + data.message);
+      setTimeout(() => window.location.href = '/accounts/success/', 1800);
+    } else {
+      document.getElementById('faceOverlay').className = 'face-overlay bad';
+      setStatus('danger', '<i class="bi bi-exclamation-circle me-1"></i>' + data.error);
+      btn.innerHTML = '<i class="bi bi-camera me-1"></i>Попробовать снова';
+      btn.disabled = false;
+      document.getElementById('retryBtn').classList.remove('d-none');
+      capturing = false;
+    }
+  } catch (e) {
+    setStatus('danger', 'Ошибка сети: ' + e.message);
+    btn.innerHTML = '<i class="bi bi-camera me-1"></i>Попробовать снова';
+    btn.disabled = false;
+    capturing = false;
+  }
+});
+
+startCamera();
+</script>
+{% endblock %}

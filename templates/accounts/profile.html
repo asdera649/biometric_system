@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Профиль{% endblock %}
+{% block content %}
+<div style="max-width:640px;margin:2rem auto">
+  <div class="card">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="bi bi-person-circle text-primary"></i> Личный кабинет
+    </div>
+    <div style="padding:1.5rem">
+      <div class="row g-3">
+        <div class="col-md-3 text-center">
+          {% if user.biometric_template.face_image %}
+            <img src="{{ user.biometric_template.face_image.url }}" class="rounded-circle" style="width:90px;height:90px;object-fit:cover;border:3px solid #e2e8f0">
+          {% else %}
+            <div style="width:90px;height:90px;background:#f0f4ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:3px solid #e2e8f0">
+              <i class="bi bi-person" style="font-size:2.5rem;color:#94a3b8"></i>
+            </div>
+          {% endif %}
+        </div>
+        <div class="col-md-9">
+          <h5 class="fw-bold">{{ user.get_full_name_ru }}</h5>
+          <div class="text-muted">@{{ user.username }}</div>
+          {% if user.email %}<div class="small mt-1"><i class="bi bi-envelope me-1"></i>{{ user.email }}</div>{% endif %}
+          {% if user.phone %}<div class="small"><i class="bi bi-telephone me-1"></i>{{ user.phone }}</div>{% endif %}
+          <div class="mt-2 d-flex gap-2 flex-wrap">
+            {% if user.is_biometric_registered %}
+              <span class="badge" style="background:#dcfce7;color:#166534"><i class="bi bi-check me-1"></i>Биометрия зарегистрирована</span>
+            {% else %}
+              <span class="badge" style="background:#fee2e2;color:#991b1b"><i class="bi bi-x me-1"></i>Биометрия не зарегистрирована</span>
+            {% endif %}
+            {% if user.is_operator %}<span class="badge" style="background:#dbeafe;color:#1e40af">Оператор</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% if user.is_biometric_registered %}
+      <div class="mt-4 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+        <div class="small fw-semibold text-muted mb-2">Биометрический шаблон</div>
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="text-muted" style="font-size:.75rem">Уверенность детекции</div>
+            <div class="metric-bar mt-1">
+              <div class="metric-bar-fill" style="background:#1a56db;width:{{ user.biometric_template.detection_confidence|floatformat:0 }}%"></div>
+            </div>
+            <div class="small fw-bold">{{ user.biometric_template.detection_confidence|floatformat:1 }}%</div>
+          </div>
+          <div class="col-6">
+            <div class="text-muted" style="font-size:.75rem">Качество изображения</div>
+            <div class="metric-bar mt-1">
+              <div class="metric-bar-fill" style="background:#059669;width:{{ user.biometric_template.image_quality_score|floatformat:0 }}%"></div>
+            </div>
+            <div class="small fw-bold">{{ user.biometric_template.image_quality_score|floatformat:1 }}%</div>
+          </div>
+        </div>
+        <div class="text-muted small mt-2">Создан: {{ user.biometric_template.created_at|date:"d.m.Y H:i" }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

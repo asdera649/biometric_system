@@ -1,0 +1,207 @@
+{% extends "operator/base_operator.html" %}
+{% block title %}Дашборд — Панель оператора{% endblock %}
+{% block op_content %}
+<div class="page-header">
+  <h1><i class="bi bi-speedometer2 me-2 text-primary"></i>Дашборд</h1>
+  <span class="text-muted small">Обновлено только что</span>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card sc-blue">
+      <div class="label">Попыток за 24ч</div>
+      <div class="value">{{ total_24h }}</div>
+      <div class="label">всего обращений</div>
+      <i class="bi bi-activity icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card sc-green">
+      <div class="label">Успешных за 24ч</div>
+      <div class="value">{{ success_24h }}</div>
+      <div class="label">{{ success_rate }}% успех</div>
+      <i class="bi bi-check-circle icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card sc-red">
+      <div class="label">Отказов за 24ч</div>
+      <div class="value">{{ fail_24h }}</div>
+      <div class="label">неуспешных попыток</div>
+      <i class="bi bi-x-circle icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card sc-orange">
+      <div class="label">Заблокировано</div>
+      <div class="value">{{ locked_users }}</div>
+      <div class="label">из {{ total_users }} активных</div>
+      <i class="bi bi-lock icon"></i>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Hourly chart -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">Активность за последние 24 часа</div>
+      <div style="padding:1rem">
+        <canvas id="hourlyChart" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- Users summary -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Пользователи</div>
+      <div style="padding:1rem">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted">Всего активных</span>
+          <span class="fw-bold">{{ total_users }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted">С биометрией</span>
+          <span class="fw-bold text-success">{{ bio_users }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted">Заблокированных</span>
+          <span class="fw-bold text-danger">{{ locked_users }}</span>
+        </div>
+        <hr>
+        <div class="text-muted small mb-1">Покрытие биометрией</div>
+        <div class="metric-bar">
+              <div class="metric-bar-fill" style="background: #1a56db; width: {% widthratio bio_users total_users 100 %}%"></div>
+        </div>
+        <div class="small mt-1">{% if total_users %}{{ bio_users }} / {{ total_users }}{% endif %}</div>
+        <a href="{% url 'users_list' %}" class="btn btn-outline-primary btn-sm w-100 mt-3">Управление пользователями</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Neural network metrics -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-cpu me-1 text-primary"></i>Метрика 1: Уверенность распознавания</div>
+      <div style="padding:1rem">
+        <div class="d-flex align-items-end gap-2 mb-1">
+          <div style="font-size:2rem;font-weight:800;color:#1a56db">{{ avg_recognition|floatformat:1 }}%</div>
+          <div class="text-muted small mb-1">среднее за 24ч</div>
+        </div>
+        <div class="metric-bar">
+          <div class="metric-bar-fill" style="background:#1a56db;width:{{ avg_recognition|floatformat:0 }}%"></div>
+        </div>
+<!--        <div class="text-muted small mt-2">Модель: InceptionResNetV1 (VGGFace2 fine-tuned)</div>-->
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-image me-1 text-success"></i>Метрика 2: Качество изображения</div>
+      <div style="padding:1rem">
+        <div class="d-flex align-items-end gap-2 mb-1">
+          <div style="font-size:2rem;font-weight:800;color:#059669">{{ avg_quality|floatformat:1 }}%</div>
+          <div class="text-muted small mb-1">среднее за 24ч</div>
+        </div>
+        <div class="metric-bar">
+          <div class="metric-bar-fill" style="background:#059669;width:{{ avg_quality|floatformat:0 }}%"></div>
+        </div>
+<!--        <div class="text-muted small mt-2">Алгоритм: Лапласиан + яркость + контраст</div>-->
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card" style="border:2px dashed #e2e8f0">
+      <div class="card-header text-muted"><i class="bi bi-eye me-1"></i>Метрика 3: Детекция живости (заглушка)</div>
+      <div style="padding:1rem">
+<!--        <div class="d-flex align-items-end gap-2 mb-1">-->
+<!--          <div style="font-size:2rem;font-weight:800;color:#94a3b8">—</div>-->
+<!--          <div class="text-muted small mb-1">модуль в разработке</div>-->
+<!--        </div>-->
+<!--        <div class="alert alert-secondary py-2 small mb-0">-->
+<!--          <i class="bi bi-info-circle me-1"></i>Liveness detection интегрируется в следующей версии-->
+<!--        </div>-->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent logs -->
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Последние попытки аутентификации</span>
+        <a href="{% url 'auth_logs' %}" class="btn btn-sm btn-outline-primary">Все записи</a>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Время</th><th>Пользователь</th><th>Результат</th><th>Схожесть</th></tr></thead>
+          <tbody>
+            {% for log in recent_logs %}
+            <tr>
+              <td class="text-muted">{{ log.timestamp|date:"H:i:s" }}</td>
+              <td>{{ log.attempted_username }}</td>
+              <td>
+                {% if log.result == 'success' %}
+                  <span class="badge badge-success"><i class="bi bi-check me-1"></i>Успех</span>
+                {% else %}
+                  <span class="badge badge-danger"><i class="bi bi-x me-1"></i>{{ log.get_result_display }}</span>
+                {% endif %}
+              </td>
+              <td>{{ log.recognition_confidence|floatformat:1 }}%</td>
+            </tr>
+            {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Нет данных</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>Системный журнал</span>
+        <a href="{% url 'system_logs' %}" class="btn btn-sm btn-outline-secondary">Все</a>
+      </div>
+      <div style="padding:.75rem">
+        {% for log in recent_system_logs %}
+        <div class="d-flex gap-2 mb-2 pb-2 border-bottom small">
+          <span class="badge {% if log.level == 'ERROR' %}bg-danger{% elif log.level == 'WARNING' %}bg-warning text-dark{% else %}bg-info{% endif %}" style="height:fit-content">{{ log.level }}</span>
+          <div>
+            <div class="fw-semibold">{{ log.component }}</div>
+            <div class="text-muted">{{ log.message|truncatechars:60 }}</div>
+            <div style="font-size:.7rem;color:#94a3b8">{{ log.timestamp|date:"H:i:s" }}</div>
+          </div>
+        </div>
+        {% empty %}<div class="text-center text-muted py-3 small">Нет записей</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const hourlyData = {{ hourly_data|safe }};
+new Chart(document.getElementById('hourlyChart'), {
+  type: 'bar',
+  data: {
+    labels: hourlyData.map(d => d.hour),
+    datasets: [{
+      label: 'Попыток',
+      data: hourlyData.map(d => d.count),
+      backgroundColor: 'rgba(26,86,219,.7)',
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+  }
+});
+</script>
+{% endblock %}

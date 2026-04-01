@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block sidebar_class %}{% endblock %}
+{% block sidebar %}
+<div class="sidebar" id="sidebar">
+  <div class="nav-section">Мониторинг</div>
+  <a href="{% url 'operator_dashboard' %}" class="{% if request.resolver_match.url_name == 'operator_dashboard' %}active{% endif %}">
+    <i class="bi bi-speedometer2"></i> Дашборд
+  </a>
+  <a href="{% url 'auth_logs' %}" class="{% if request.resolver_match.url_name == 'auth_logs' %}active{% endif %}">
+    <i class="bi bi-journal-text"></i> Журнал аутентификации
+  </a>
+  <a href="{% url 'system_logs' %}" class="{% if request.resolver_match.url_name == 'system_logs' %}active{% endif %}">
+    <i class="bi bi-terminal"></i> Системный журнал
+  </a>
+  <div class="nav-section" style="margin-top:.5rem">Управление</div>
+  <a href="{% url 'users_list' %}" class="{% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-people"></i> Пользователи
+  </a>
+  <a href="{% url 'system_settings' %}" class="{% if request.resolver_match.url_name == 'system_settings' %}active{% endif %}">
+    <i class="bi bi-gear"></i> Настройки системы
+  </a>
+  <div class="nav-section" style="margin-top:.5rem">Аналитика</div>
+  <a href="{% url 'reports' %}" class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+    <i class="bi bi-bar-chart-line"></i> Отчёты и метрики
+  </a>
+  <div style="border-top:1px solid rgba(255,255,255,.07);margin:1rem 0"></div>
+  <a href="{% url 'home' %}"><i class="bi bi-house"></i> На сайт</a>
+</div>
+{% endblock %}
+{% block content %}
+<div style="margin-left:0px">{% block op_content %}{% endblock %}</div>
+{% endblock %}

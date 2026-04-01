@@ -1,0 +1,185 @@
+{% extends "operator/base_operator.html" %}
+{% block title %}Отчёты и метрики{% endblock %}
+{% block op_content %}
+<div class="page-header">
+  <h1><i class="bi bi-bar-chart-line me-2 text-primary"></i>Отчёты и метрики нейросети</h1>
+</div>
+<!-- Period selector -->
+<div class="card mb-4">
+  <div style="padding:1rem">
+    <form method="get" class="d-flex align-items-center gap-3 flex-wrap">
+      <label class="fw-semibold small">Период анализа:</label>
+      <div class="btn-group btn-group-sm">
+        {% for d, lbl in period_options %}
+        <a href="?period={{ d }}" class="btn {% if period == d %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ lbl }}</a>
+        {% endfor %}
+      </div>
+      <span class="text-muted small">{{ period_from|date:"d.m.Y" }} — сейчас</span>
+    </form>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="stat-card sc-blue"><div class="label">Всего попыток</div><div class="value">{{ total }}</div><i class="bi bi-activity icon"></i></div></div>
+  <div class="col-6 col-lg-3"><div class="stat-card sc-green"><div class="label">Успешных</div><div class="value">{{ success }}</div><i class="bi bi-check icon"></i></div></div>
+  <div class="col-6 col-lg-3"><div class="stat-card sc-red"><div class="label">Отказов</div><div class="value">{{ fail }}</div><i class="bi bi-x icon"></i></div></div>
+  <div class="col-6 col-lg-3">
+    <form method="post" action="{% url 'save_metrics_snapshot' %}">
+      {% csrf_token %}<input type="hidden" name="period" value="{{ period }}">
+      <button type="submit" class="stat-card sc-purple w-100 border-0" style="cursor:pointer;text-align:left">
+        <div class="label">Сохранить снимок</div>
+        <div class="value" style="font-size:1.3rem">💾</div>
+        <div class="label">в архив метрик</div>
+        <i class="bi bi-cloud-upload icon"></i>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Neural network metrics panels -->
+<div class="row g-3 mb-4">
+  <!-- Metric 1: Recognition confidence -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-cpu me-1 text-primary"></i>Метрика 1: Уверенность распознавания</div>
+      <div style="padding:1.25rem">
+<!--        <div class="text-muted small mb-1">Модель: InceptionResNetV1 (VGGFace2 fine-tuned)</div>-->
+        <div style="font-size:2.5rem;font-weight:800;color:#1a56db">{{ metrics.avg_conf|default:0|floatformat:1 }}%</div>
+        <div class="text-muted small">среднее значение</div>
+        <hr>
+        <div class="row g-2 small">
+          <div class="col-6"><div class="text-muted">Минимум</div><div class="fw-bold">{{ metrics.min_conf|default:0|floatformat:1 }}%</div></div>
+          <div class="col-6"><div class="text-muted">Максимум</div><div class="fw-bold">{{ metrics.max_conf|default:0|floatformat:1 }}%</div></div>
+          <div class="col-12"><div class="text-muted">Выше порога ({{ cfg.recognition_threshold|floatformat:0 }}%)</div>
+            <div class="metric-bar mt-1">
+              <div class="metric-bar-fill" style="background:#1a56db;width:{% if total %}{{ above_threshold_conf }}{% endif %}%"></div>
+            </div>
+            <div class="fw-bold">{{ above_threshold_conf }} / {{ total }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Metric 2: Image quality -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-image me-1 text-success"></i>Метрика 2: Качество изображения</div>
+      <div style="padding:1.25rem">
+<!--        <div class="text-muted small mb-1">Алгоритм: Лапласиан + яркость + контраст + разрешение</div>-->
+        <div style="font-size:2.5rem;font-weight:800;color:#059669">{{ metrics.avg_q|default:0|floatformat:1 }}%</div>
+        <div class="text-muted small">среднее значение</div>
+        <hr>
+        <div class="row g-2 small">
+          <div class="col-6"><div class="text-muted">Минимум</div><div class="fw-bold">{{ metrics.min_q|default:0|floatformat:1 }}%</div></div>
+          <div class="col-6"><div class="text-muted">Максимум</div><div class="fw-bold">{{ metrics.max_q|default:0|floatformat:1 }}%</div></div>
+          <div class="col-12"><div class="text-muted">Выше порога ({{ cfg.quality_threshold|floatformat:0 }}%)</div>
+            <div class="metric-bar mt-1">
+              <div class="metric-bar-fill" style="background:#059669;width:{% if total %}{{ above_threshold_qual }}{% endif %}%"></div>
+            </div>
+            <div class="fw-bold">{{ above_threshold_qual }} / {{ total }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Metric 3: Liveness (placeholder) -->
+  <div class="col-lg-4">
+    <div class="card h-100" style="border:2px dashed #e2e8f0">
+      <div class="card-header text-muted"><i class="bi bi-eye me-1"></i>Метрика 3: Детекция живости</div>
+      <div style="padding:1.25rem">
+<!--        <div class="text-muted small mb-1">Модуль: Liveness detection (в разработке)</div>-->
+<!--        <div style="font-size:2.5rem;font-weight:800;color:#94a3b8">—</div>-->
+<!--        <div class="text-muted small">данные недоступны</div>-->
+<!--        <hr>-->
+<!--        <div class="alert alert-secondary py-2 small mb-2">-->
+<!--          <i class="bi bi-hourglass me-1"></i>-->
+<!--          Планируемые методы: анализ текстуры (LBP/HOG), оптический поток, LSTM-классификатор-->
+<!--        </div>-->
+<!--        <div class="text-muted small">Порог (заглушка): {{ cfg.liveness_threshold|floatformat:0 }}%</div>-->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Failure breakdown -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">Распределение отказов</div>
+      <div style="padding:1rem">
+        <canvas id="failChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">Динамика метрик по дням</div>
+      <div style="padding:1rem">
+        <canvas id="dailyChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Saved snapshots -->
+{% if snapshots %}
+<div class="card">
+  <div class="card-header">Архив снимков метрик</div>
+  <div style="overflow-x:auto">
+    <table class="table table-sm mb-0 small">
+      <thead><tr><th>Дата снимка</th><th>Период</th><th>Попыток</th><th>Успешность</th><th>Ср. схожесть</th><th>Ср. качество</th></tr></thead>
+      <tbody>
+        {% for s in snapshots %}
+        <tr>
+          <td>{{ s.recorded_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ s.period_from|date:"d.m" }} — {{ s.period_to|date:"d.m.Y" }}</td>
+          <td>{{ s.total_attempts }}</td>
+          <td>{{ s.success_rate }}%</td>
+          <td>{{ s.avg_recognition_confidence|floatformat:1 }}%</td>
+          <td>{{ s.avg_quality_score|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const failData = {{ fail_breakdown|safe }};
+const resultLabels = {{ result_labels|safe }};
+const failLabels = Object.keys(failData).map(k => resultLabels[k] || k);
+const failValues = Object.values(failData);
+
+if (failValues.length > 0) {
+  new Chart(document.getElementById('failChart'), {
+    type: 'doughnut',
+    data: {
+      labels: failLabels,
+      datasets: [{ data: failValues, backgroundColor: ['#1a56db','#059669','#dc2626','#d97706','#7c3aed','#0ea5e9'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+  });
+}
+
+const dailyData = {{ daily_data|safe }};
+new Chart(document.getElementById('dailyChart'), {
+  type: 'line',
+  data: {
+    labels: dailyData.map(d => d.date),
+    datasets: [
+      { label: 'Схожесть', data: dailyData.map(d => +(d.avg_conf * 100).toFixed(1)), borderColor: '#1a56db', tension: .3, fill: false, yAxisID: 'y' },
+      { label: 'Качество', data: dailyData.map(d => +(d.avg_qual * 100).toFixed(1)), borderColor: '#059669', tension: .3, fill: false, yAxisID: 'y' },
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+    plugins: { legend: { position: 'top' } }
+  }
+});
+</script>
+{% endblock %}

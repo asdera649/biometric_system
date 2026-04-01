@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Аутентификация — Сканирование{% endblock %}
+{% block layout %}
+<div class="auth-page">
+  <div style="width:100%;max-width:540px">
+    <div style="background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden">
+      <div class="auth-header">
+        <i class="bi bi-person-bounding-box"></i>
+        <h4 class="mb-0 fw-bold">Сканирование лица</h4>
+        <p class="mb-0 opacity-75 small mt-1">Пользователь: <strong>{{ username }}</strong></p>
+      </div>
+      <div style="padding:1.5rem 2rem">
+        <div style="position:relative;border-radius:12px;overflow:hidden;background:#0f172a;margin-bottom:1rem">
+          <video id="cameraFeed" autoplay playsinline style="width:100%;display:block;max-height:320px;object-fit:cover"></video>
+          <canvas id="snapshot" style="display:none"></canvas>
+          <div class="face-overlay" id="faceOverlay"></div>
+          <div id="countdown" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4rem;font-weight:800;color:#fff;display:none;text-shadow:0 2px 12px rgba(0,0,0,.8)"></div>
+        </div>
+        <div class="row g-2 mb-3" id="metricsRow" style="display:none">
+          <div class="col-6">
+            <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+              <div class="text-muted" style="font-size:.7rem">Уверенность распознавания</div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="confBar" style="background:#1a56db;width:0%"></div></div>
+              <div class="fw-bold small mt-1" id="confVal">—</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+              <div class="text-muted" style="font-size:.7rem">Качество изображения</div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="qualBar" style="background:#059669;width:0%"></div></div>
+              <div class="fw-bold small mt-1" id="qualVal">—</div>
+            </div>
+          </div>
+        </div>
+<!--        <div id="livenessPlaceholder" class="alert alert-secondary py-2 small mb-3">-->
+<!--          <i class="bi bi-camera-video me-1"></i>-->
+<!--          <strong>Детекция живости:</strong> модуль в разработке (заглушка)-->
+<!--        </div>-->
+        <div id="statusMsg" class="alert py-2 d-none"></div>
+        <button id="authBtn" class="btn btn-primary w-100 py-2 fw-semibold" disabled>
+          <i class="bi bi-person-check me-1"></i>Подтвердить личность
+        </button>
+        <a href="{% url 'face_login' %}" class="btn btn-outline-secondary w-100 mt-2 py-2">Назад</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const USERNAME = "{{ username }}";
+const CSRF = "{{ csrf_token }}";
+let stream = null, busy = false;
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+    document.getElementById('cameraFeed').srcObject = stream;
+    document.getElementById('authBtn').disabled = false;
+  } catch(e) {
+    setStatus('danger', '<i class="bi bi-camera-video-off me-1"></i>Нет доступа к камере: ' + e.message);
+  }
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('statusMsg');
+  el.className = 'alert alert-' + type + ' py-2';
+  el.innerHTML = msg;
+  el.classList.remove('d-none');
+}
+
+function showMetrics(conf, qual) {
+  document.getElementById('metricsRow').style.display = 'flex';
+  document.getElementById('confBar').style.width = (conf * 100) + '%';
+  document.getElementById('confVal').textContent = (conf * 100).toFixed(1) + '%';
+  document.getElementById('qualBar').style.width = (qual * 100) + '%';
+  document.getElementById('qualVal').textContent = (qual * 100).toFixed(1) + '%';
+}
+
+document.getElementById('authBtn').addEventListener('click', async () => {
+  if (busy) return;
+  busy = true;
+  const btn = document.getElementById('authBtn');
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Обработка…';
+  btn.disabled = true;
+
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('snapshot');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+  try {
+    const resp = await fetch('/biometric/api/authenticate/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ username: USERNAME, image_data: imageData })
+    });
+    const data = await resp.json();
+    showMetrics(data.recognition_confidence || 0, data.quality_score || 0);
+    if (data.success) {
+      document.getElementById('faceOverlay').className = 'face-overlay good';
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      setStatus('success', '<i class="bi bi-check-circle me-1"></i>Аутентификация успешна! Перенаправление…');
+      setTimeout(() => window.location.href = data.redirect_url || '/accounts/success/', 1500);
+    } else {
+      document.getElementById('faceOverlay').className = 'face-overlay bad';
+      let msg = '<i class="bi bi-x-circle me-1"></i>' + data.error;
+      if (data.attempts_left !== undefined && data.attempts_left > 0) {
+        msg += ` <span class="text-muted">(осталось попыток: ${data.attempts_left})</span>`;
+      }
+      setStatus('danger', msg);
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
+      btn.disabled = false;
+      busy = false;
+    }
+  } catch(e) {
+    setStatus('danger', 'Ошибка сети: ' + e.message);
+    btn.innerHTML = '<i class="bi bi-person-check me-1"></i>Подтвердить личность';
+    btn.disabled = false;
+    busy = false;
+  }
+});
+
+startCamera();
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Главная — БиоАутентификация{% endblock %}
+{% block content %}
+<div style="min-height:calc(100vh - 58px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);margin:-2rem;padding:3rem 2rem;">
+  <div style="max-width:700px;text-align:center;color:#fff">
+    <div style="width:90px;height:90px;background:linear-gradient(135deg,#1a56db,#0ea5e9);border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;box-shadow:0 8px 32px rgba(14,165,233,.4)">
+      <i class="bi bi-shield-lock-fill" style="font-size:2.5rem;color:#fff"></i>
+    </div>
+    <h1 style="font-size:2.5rem;font-weight:800;margin-bottom:1rem">Лого<br></h1>
+    <p style="color:#94a3b8;font-size:1.1rem;max-width:500px;margin:0 auto 2.5rem">
+      Интеллектуальная система распознавания лиц с защитой от подделок.
+    </p>
+    {% if user.is_authenticated %}
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <a href="{% url 'profile' %}" class="btn btn-primary btn-lg px-4"><i class="bi bi-person-circle me-2"></i>Мой профиль</a>
+        {% if user.is_operator or user.is_superuser %}
+        <a href="{% url 'operator_dashboard' %}" class="btn btn-lg px-4" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)"><i class="bi bi-grid-fill me-2"></i>Панель оператора</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <a href="{% url 'face_login' %}" class="btn btn-primary btn-lg px-4"><i class="bi bi-box-arrow-in-right me-2"></i>Войти по лицу</a>
+        <a href="{% url 'register_step1' %}" class="btn btn-lg px-4" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)"><i class="bi bi-person-plus me-2"></i>Регистрация</a>
+      </div>
+    {% endif %}
+    <div style="display:flex;gap:2rem;justify-content:center;margin-top:3rem;flex-wrap:wrap">
+      {% for icon, title, desc in info_blocks %}
+      <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:1.5rem;max-width:180px;text-align:left">
+        <i class="bi bi-{{ icon }}" style="font-size:1.5rem;color:#0ea5e9;margin-bottom:.75rem;display:block"></i>
+        <div style="font-weight:600;margin-bottom:.25rem">{{ title }}</div>
+        <div style="font-size:.8rem;color:#94a3b8">{{ desc }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

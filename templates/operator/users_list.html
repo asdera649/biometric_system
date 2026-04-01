@@ -1,0 +1,68 @@
+{% extends "operator/base_operator.html" %}
+{% block title %}Управление пользователями{% endblock %}
+{% block op_content %}
+<div class="page-header">
+  <h1><i class="bi bi-people me-2 text-primary"></i>Пользователи</h1>
+</div>
+<div class="card mb-4">
+  <div style="padding:1rem">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm" placeholder="Поиск по ФИО, логину, email…">
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">— Все статусы —</option>
+          <option value="bio" {% if status_filter == 'bio' %}selected{% endif %}>С биометрией</option>
+          <option value="nobio" {% if status_filter == 'nobio' %}selected{% endif %}>Без биометрии</option>
+          <option value="locked" {% if status_filter == 'locked' %}selected{% endif %}>Заблокированные</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Неактивные</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Найти</button>
+        <a href="{% url 'users_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <div style="overflow-x:auto">
+    <table class="table mb-0">
+      <thead><tr><th>ФИО / Логин</th><th>Email</th><th>Биометрия</th><th>Статус</th><th>Регистрация</th><th></th></tr></thead>
+      <tbody>
+        {% for u in page %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ u.get_full_name_ru }}</div>
+            <div class="text-muted small">@{{ u.username }}</div>
+          </td>
+          <td class="text-muted small">{{ u.email|default:"—" }}</td>
+          <td>
+            {% if u.is_biometric_registered %}<span class="badge badge-success"><i class="bi bi-check me-1"></i>Есть</span>
+            {% else %}<span class="badge badge-secondary">Нет</span>{% endif %}
+          </td>
+          <td>
+            {% if not u.is_active %}<span class="badge badge-danger">Неактивен</span>
+            {% elif u.is_locked %}<span class="badge badge-warning">Заблокирован</span>
+            {% else %}<span class="badge badge-success">Активен</span>{% endif %}
+            {% if u.is_operator %}<span class="badge badge-info ms-1">Оператор</span>{% endif %}
+          </td>
+          <td class="text-muted small">{{ u.created_at|date:"d.m.Y" }}</td>
+          <td><a href="{% url 'user_detail' u.pk %}" class="btn btn-sm btn-outline-primary">Открыть</a></td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">Пользователи не найдены</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.has_other_pages %}
+  <div style="padding:1rem;border-top:1px solid #e2e8f0">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&q={{ search }}">«</a></li>{% endif %}
+      <li class="page-item active"><a class="page-link">{{ page.number }} / {{ page.paginator.num_pages }}</a></li>
+      {% if page.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&q={{ search }}">»</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — Шаг 1{% endblock %}
+{% block layout %}
+<div class="auth-page">
+  <div style="width:100%;max-width:540px">
+    <div style="background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden">
+      <div class="auth-header">
+        <i class="bi bi-person-plus-fill"></i>
+        <h4 class="mb-0 fw-bold">Регистрация</h4>
+        <p class="mb-0 opacity-75 small mt-1">Создайте аккаунт в системе</p>
+      </div>
+      <div style="padding:1.5rem 2rem">
+        <!-- Stepper -->
+        <div class="stepper mb-4">
+          <div class="step active"><div class="step-num">1</div><div class="step-label">Данные</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-num">2</div><div class="step-label">Биометрия</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-num">3</div><div class="step-label">Готово</div></div>
+        </div>
+<!--        {% for msg in messages %}<div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %}">{{ msg }}</div>{% endfor %}-->
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Логин <span class="text-danger">*</span></label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger small mt-1">{% for e in form.username.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Фамилия <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger small mt-1">{% for e in form.last_name.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Имя <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger small mt-1">{% for e in form.first_name.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Отчество</label>
+              {{ form.patronymic }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Email</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger small mt-1">{% for e in form.email.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Телефон</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<div class="text-danger small mt-1">{% for e in form.phone.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Пароль <span class="text-danger">*</span></label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}<div class="text-danger small mt-1">{% for e in form.password1.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Повтор пароля <span class="text-danger">*</span></label>
+              {{ form.password2 }}
+              {% if form.password2.errors %}<div class="text-danger small mt-1">{% for e in form.password2.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+          </div>
+          {% if form.non_field_errors %}<div class="alert alert-danger mt-3">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+          <button type="submit" class="btn btn-primary w-100 mt-4 py-2 fw-semibold">
+            Далее <i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        </form>
+        <p class="text-center text-muted small mt-3">Уже есть аккаунт? <a href="{% url 'face_login' %}">Войти</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

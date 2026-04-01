@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Успешный вход{% endblock %}
+{% block layout %}
+<div class="auth-page">
+  <div style="background:#fff;border-radius:20px;padding:3rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:420px;width:100%">
+    <div style="width:80px;height:80px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem">
+      <i class="bi bi-check-lg" style="font-size:2.5rem;color:#059669"></i>
+    </div>
+    <h3 class="fw-bold">Добро пожаловать!</h3>
+    <p class="text-muted">{{ user.get_full_name_ru }}</p>
+    <p class="text-muted small">Вы успешно прошли биометрическую аутентификацию.</p>
+    <a href="{% url 'profile' %}" class="btn btn-primary px-4 mt-2">Перейти в профиль</a>
+  </div>
+</div>
+{% endblock %}

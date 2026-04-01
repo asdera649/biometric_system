@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Вход — БиоАутентификация{% endblock %}
+{% block layout %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <i class="bi bi-shield-check"></i>
+      <h4 class="mb-0 fw-bold">Вход в систему</h4>
+      <p class="mb-0 opacity-75 small mt-1">Аутентификация по лицу</p>
+    </div>
+    <div class="auth-body">
+<!--      {% for msg in messages %}<div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} py-2 small">{{ msg }}</div>{% endfor %}-->
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <label class="form-label fw-semibold">Логин</label>
+        {{ form.username }}
+        {% if form.username.errors %}<div class="text-danger small mt-1">{% for e in form.username.errors %}{{ e }}{% endfor %}</div>{% endif %}
+        <button type="submit" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
+          <i class="bi bi-arrow-right-circle me-1"></i>Далее — сканирование лица
+        </button>
+      </form>
+      <p class="text-center text-muted small mt-3">Нет аккаунта? <a href="{% url 'register_step1' %}">Зарегистрироваться</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

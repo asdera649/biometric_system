@@ -1,0 +1,111 @@
+{% extends "operator/base_operator.html" %}
+{% block title %}Пользователь {{ target.username }}{% endblock %}
+{% block op_content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'users_list' %}" class="btn btn-sm btn-outline-secondary mb-2"><i class="bi bi-arrow-left me-1"></i>Назад</a>
+    <h1><i class="bi bi-person-circle me-2 text-primary"></i>{{ target.get_full_name_ru }}</h1>
+  </div>
+</div>
+<!--{% for msg in messages %}<div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} alert-dismissible"><button type="button" class="btn-close" data-bs-dismiss="alert"></button>{{ msg }}</div>{% endfor %}-->
+
+<div class="row g-3">
+  <!-- Info card -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">Информация</div>
+      <div style="padding:1.25rem">
+        {% if target.biometric_template.face_image %}
+          <img src="{{ target.biometric_template.face_image.url }}" class="rounded-circle d-block mx-auto mb-3" style="width:80px;height:80px;object-fit:cover;border:3px solid #e2e8f0">
+        {% else %}
+          <div style="width:80px;height:80px;background:#f0f4ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+            <i class="bi bi-person" style="font-size:2rem;color:#94a3b8"></i>
+          </div>
+        {% endif %}
+        <table class="table table-sm table-borderless mb-0 small">
+          <tr><td class="text-muted">Логин</td><td class="fw-semibold">{{ target.username }}</td></tr>
+          <tr><td class="text-muted">ФИО</td><td>{{ target.get_full_name_ru }}</td></tr>
+          <tr><td class="text-muted">Email</td><td>{{ target.email|default:"—" }}</td></tr>
+          <tr><td class="text-muted">Телефон</td><td>{{ target.phone|default:"—" }}</td></tr>
+          <tr><td class="text-muted">Регистрация</td><td>{{ target.created_at|date:"d.m.Y" }}</td></tr>
+          <tr><td class="text-muted">Последний вход</td><td>{% if last_success %}{{ last_success.timestamp|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td></tr>
+          <tr><td class="text-muted">Неудачных попыток</td><td class="{% if target.failed_attempts > 0 %}text-danger fw-bold{% endif %}">{{ target.failed_attempts }}</td></tr>
+          <tr><td class="text-muted">Заблокирован до</td><td>{% if target.locked_until %}{{ target.locked_until|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td></tr>
+        </table>
+        <div class="mt-2 d-flex gap-1 flex-wrap">
+          {% if target.is_biometric_registered %}<span class="badge badge-success">Биометрия</span>{% else %}<span class="badge badge-secondary">Нет биометрии</span>{% endif %}
+          {% if target.is_operator %}<span class="badge badge-info">Оператор</span>{% endif %}
+          {% if not target.is_active %}<span class="badge badge-danger">Неактивен</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-header">Действия</div>
+      <div style="padding:1rem;display:flex;flex-direction:column;gap:.5rem">
+        {% if target.is_locked %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="unlock">
+          <button class="btn btn-warning btn-sm w-100"><i class="bi bi-unlock me-1"></i>Снять блокировку</button>
+        </form>
+        {% endif %}
+        {% if target.is_active %}
+        <form method="post" onsubmit="return confirm('Деактивировать аккаунт?')">{% csrf_token %}<input type="hidden" name="action" value="deactivate">
+          <button class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-person-x me-1"></i>Деактивировать</button>
+        </form>
+        {% else %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="activate">
+          <button class="btn btn-outline-success btn-sm w-100"><i class="bi bi-person-check me-1"></i>Активировать</button>
+        </form>
+        {% endif %}
+        {% if target.is_biometric_registered %}
+        <form method="post" onsubmit="return confirm('Удалить биометрические данные? Пользователь не сможет войти.')">{% csrf_token %}<input type="hidden" name="action" value="delete_biometric">
+          <button class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash me-1"></i>Удалить биометрию</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <!-- Edit form -->
+    <div class="card mb-3">
+      <div class="card-header">Редактировать данные</div>
+      <div style="padding:1.25rem">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit">
+          <div class="row g-3">
+            {% for field in edit_form %}
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small">{% for e in field.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-save me-1"></i>Сохранить</button>
+        </form>
+      </div>
+    </div>
+    <!-- Auth logs -->
+    <div class="card">
+      <div class="card-header">Последние попытки аутентификации</div>
+      <div style="overflow-x:auto">
+        <table class="table table-sm mb-0 small">
+          <thead><tr><th>Время</th><th>Результат</th><th>Схожесть</th><th>Качество</th><th>IP</th></tr></thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>{{ log.timestamp|date:"d.m H:i:s" }}</td>
+              <td>{% if log.result == 'success' %}<span class="badge badge-success">Успех</span>{% else %}<span class="badge badge-danger">{{ log.get_result_display }}</span>{% endif %}</td>
+              <td>{{ log.recognition_confidence|floatformat:1 }}%</td>
+              <td>{{ log.quality_score|floatformat:1 }}%</td>
+              <td class="text-muted">{{ log.ip_address|default:"—" }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">Нет записей</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

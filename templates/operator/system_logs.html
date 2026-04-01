@@ -1,0 +1,62 @@
+{% extends "operator/base_operator.html" %}
+{% block title %}Системный журнал{% endblock %}
+{% block op_content %}
+<div class="page-header">
+  <h1><i class="bi bi-terminal me-2 text-primary"></i>Системный журнал</h1>
+</div>
+<div class="card mb-4">
+  <div style="padding:1rem">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Уровень</label>
+        <select name="level" class="form-select form-select-sm">
+          <option value="">— Все —</option>
+          {% for val, label in level_choices %}<option value="{{ val }}" {% if val == level_filter %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Компонент</label>
+        <select name="component" class="form-select form-select-sm">
+          <option value="">— Все —</option>
+          {% for c in components %}<option value="{{ c }}" {% if c == component_filter %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Найти</button>
+        <a href="{% url 'system_logs' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <div style="overflow-x:auto">
+    <table class="table table-sm mb-0" style="font-size:.82rem">
+      <thead><tr><th>Время</th><th>Уровень</th><th>Компонент</th><th>Сообщение</th><th>Пользователь</th></tr></thead>
+      <tbody>
+        {% for log in page %}
+        <tr>
+          <td class="text-muted">{{ log.timestamp|date:"d.m.Y H:i:s" }}</td>
+          <td>
+            {% if log.level == 'ERROR' %}<span class="badge bg-danger">ERROR</span>
+            {% elif log.level == 'WARNING' %}<span class="badge bg-warning text-dark">WARN</span>
+            {% else %}<span class="badge bg-info">INFO</span>{% endif %}
+          </td>
+          <td class="fw-semibold">{{ log.component }}</td>
+          <td>{{ log.message }}</td>
+          <td class="text-muted">{{ log.user.username|default:"—" }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Нет записей</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.has_other_pages %}
+  <div style="padding:1rem;border-top:1px solid #e2e8f0">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&level={{ level_filter }}">«</a></li>{% endif %}
+      <li class="page-item active"><a class="page-link">{{ page.number }} / {{ page.paginator.num_pages }}</a></li>
+      {% if page.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&level={{ level_filter }}">»</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
