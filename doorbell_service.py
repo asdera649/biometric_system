@@ -28,6 +28,8 @@ CONFIG = {
         'RTSP_URL',
         'rtsp://admin:microimpuls25@192.168.88.211:554/Streaming/Channels/101'
     ),
+    #rtsp://localhost:5544/live
+    #rtsp://admin:microimpuls25@192.168.88.211:554/Streaming/Channels/101
 
     # URL системы
     'API_BASE_URL': os.getenv('API_BASE_URL', 'http://127.0.0.1:8000'),
@@ -36,7 +38,7 @@ CONFIG = {
     'SERVICE_TOKEN': os.getenv('SERVICE_TOKEN', 'токен-домофона'),
 
     # Сколько секунд ждать между попытками идентификации
-    'IDENTIFY_INTERVAL_SEC': float(os.getenv('IDENTIFY_INTERVAL', '3.0')),
+    'IDENTIFY_INTERVAL_SEC': float(os.getenv('IDENTIFY_INTERVAL', '1.5')),
 
     # После успешного открытия, задержка перед следующей идентификацией
     'SUCCESS_COOLDOWN_SEC': float(os.getenv('SUCCESS_COOLDOWN', '10.0')),
@@ -45,7 +47,7 @@ CONFIG = {
     'MIN_FACE_SIZE_PX': int(os.getenv('MIN_FACE_SIZE', '80')),
 
     # Качество JPEG при отправке в API в процентах
-    'JPEG_QUALITY': int(os.getenv('JPEG_QUALITY', '85')),
+    'JPEG_QUALITY': int(os.getenv('JPEG_QUALITY', '100')),
 
     # Таймаут HTTP-запроса к API в секундах
     'API_TIMEOUT_SEC': int(os.getenv('API_TIMEOUT', '10')),

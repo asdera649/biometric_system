@@ -1,5 +1,5 @@
 """
-API-эндпоинты для биометрической обработки (AJAX/JSON).
+API-эндпоинты для биометрической обработки
 """
 import json
 import logging
@@ -68,25 +68,27 @@ def api_register_biometric(request):
                              'quality_score': result.get('quality_score', 0),
                              'detection_confidence': result.get('detection_confidence', 0)})
 
+    conf = round(result['detection_confidence'] * 100, 2)
+    qual = round(result['quality_score'] * 100, 2)
+
     # Сохраняем шаблон
     template, _ = BiometricTemplate.objects.get_or_create(user=user)
     template.embedding = result['embedding']
-    template.detection_confidence = result['detection_confidence']
-    template.image_quality_score = result['quality_score']
+    template.detection_confidence = conf
+    template.image_quality_score = qual
 
-    # Сохраняем миниатюру лица
-    if image_data:
-        try:
-            from PIL import Image
-            img_bytes = base64.b64decode(image_data.split(',', 1)[-1])
-            img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
-            img.thumbnail((200, 200))
-            thumb_io = io.BytesIO()
-            img.save(thumb_io, format='JPEG', quality=85)
-            from django.core.files.base import ContentFile
-            template.face_image.save(f'user_{user.pk}.jpg', ContentFile(thumb_io.getvalue()), save=False)
-        except Exception:
-            pass
+    # if image_data:
+    #     try:
+    #         from PIL import Image
+    #         img_bytes = base64.b64decode(image_data.split(',', 1)[-1])
+    #         img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
+    #         img.thumbnail((200, 200))
+    #         thumb_io = io.BytesIO()
+    #         img.save(thumb_io, format='JPEG', quality=85)
+    #         from django.core.files.base import ContentFile
+    #         template.face_image.save(f'user_{user.pk}.jpg', ContentFile(thumb_io.getvalue()), save=False)
+    #     except Exception:
+    #         pass
 
     template.save()
     user.is_biometric_registered = True
@@ -164,8 +166,11 @@ def api_authenticate(request):
         image_data, template.embedding, threshold=cfg.recognition_threshold
     )
 
+    conf = round(result['recognition_confidence'] * 100, 2)
+    qual = round(result['quality_score'] * 100, 2)
+
     log_attempt(user, result['result_code'],
-                result['recognition_confidence'], result['quality_score'],
+                conf, qual,
                 result.get('error', ''))
 
     if result['success']:
@@ -198,10 +203,11 @@ def api_authenticate(request):
             'attempts_left': max(0, cfg.max_auth_attempts - user.failed_attempts)
         })
 
+@csrf_exempt
 @require_POST
 def api_identify(request):
     """
-    Идентификация лица (для домофона — без логина).
+    Идентификация лица (для домофона, без логина).
 
     Принимает кадр с камеры домофона, сравнивает со всеми биометрическими
     шаблонами в базе, возвращает лучшее совпадение (если выше порога).

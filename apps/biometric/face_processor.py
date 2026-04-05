@@ -1,8 +1,7 @@
 """
 Процессор биометрических данных лица.
 Использует архитектуру InceptionResNetV1 (FaceNet), предобученную на VGGFace2.
-Для целей ВКР: модель дообучена на собственных данных путём адаптации
-порогов и обновления пространства эмбеддингов (metric learning подход).
+
 """
 import json
 import logging
@@ -26,8 +25,8 @@ def get_processor():
 class FaceProcessor:
     """
     Двухэтапный конвейер обработки лица:
-    1. MTCNN — детекция и выравнивание лица
-    2. InceptionResNetV1 (VGGFace2) — извлечение 512-мерного эмбеддинга
+    1. MTCNN — обнаружение и выравнивание лица
+    2. InceptionResNetV1 (VGGFace2) — извлечение 512-мерного вектора
     """
 
     def __init__(self):
@@ -46,7 +45,7 @@ class FaceProcessor:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             logger.info(f'FaceProcessor: устройство — {self.device}')
 
-            # MTCNN: детекция лица + ключевые точки + выравнивание
+            # MTCNN: обнаружение лица + ключевые точки + выравнивание
             self.mtcnn = MTCNN(
                 image_size=160,
                 margin=20,
@@ -58,7 +57,6 @@ class FaceProcessor:
             )
 
             # InceptionResNetV1, предобученная на VGGFace2
-            # Для ВКР: веса адаптированы под специфику входных данных системы
             self.resnet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
             self._initialized = True
             logger.info('FaceProcessor: модели загружены успешно')
@@ -81,7 +79,7 @@ class FaceProcessor:
 
     def detect_face(self, img: Image.Image):
         """
-        Детекция лица. Возвращает (face_tensor, confidence, box) или (None, 0, None).
+        Обнаружение лица. Возвращает (face_tensor, confidence, box) или (None, 0, None).
         """
         if not self._initialized:
             return None, 0.0, None
@@ -100,7 +98,7 @@ class FaceProcessor:
 
             return face_tensor, confidence, box
         except Exception as e:
-            logger.error(f'Ошибка детекции лица: {e}')
+            logger.error(f'Ошибка обнаружение лица: {e}')
             return None, 0.0, None
 
     def get_embedding(self, face_tensor) -> np.ndarray:
@@ -118,7 +116,7 @@ class FaceProcessor:
             return None
 
     def cosine_similarity(self, emb1: np.ndarray, emb2: np.ndarray) -> float:
-        """Косинусная мера сходства эмбеддингов"""
+        """Косинусная мера сходства"""
         norm1 = np.linalg.norm(emb1)
         norm2 = np.linalg.norm(emb2)
         if norm1 == 0 or norm2 == 0:
@@ -196,7 +194,7 @@ class FaceProcessor:
             stored_emb = self.embedding_from_json(stored_embedding_json)
             similarity = self.cosine_similarity(embedding, stored_emb)
 
-            # Заглушка для детекции живости (место для интеграции)
+            # Заглушка для обнаружения живости
             liveness_score = None  # TODO: integrate liveness model
 
             if similarity >= threshold:
