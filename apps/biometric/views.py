@@ -77,18 +77,18 @@ def api_register_biometric(request):
     template.detection_confidence = conf
     template.image_quality_score = qual
 
-    # if image_data:
-    #     try:
-    #         from PIL import Image
-    #         img_bytes = base64.b64decode(image_data.split(',', 1)[-1])
-    #         img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
-    #         img.thumbnail((200, 200))
-    #         thumb_io = io.BytesIO()
-    #         img.save(thumb_io, format='JPEG', quality=85)
-    #         from django.core.files.base import ContentFile
-    #         template.face_image.save(f'user_{user.pk}.jpg', ContentFile(thumb_io.getvalue()), save=False)
-    #     except Exception:
-    #         pass
+    if image_data:
+        try:
+            from PIL import Image
+            img_bytes = base64.b64decode(image_data.split(',', 1)[-1])
+            img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
+            img.thumbnail((200, 200))
+            thumb_io = io.BytesIO()
+            img.save(thumb_io, format='JPEG', quality=100)
+            from django.core.files.base import ContentFile
+            template.face_image.save(f'user_{user.pk}.jpg', ContentFile(thumb_io.getvalue()), save=False)
+        except Exception:
+            pass
 
     template.save()
     user.is_biometric_registered = True
@@ -263,10 +263,12 @@ def api_identify(request):
 
     quality = calculate_quality(img)
 
+    qual = round(quality * 100, 2)
+
     # Обнаружение лица
     face_tensor, det_conf, box = processor.detect_face(img)
     if face_tensor is None:
-        _save_door_log(None, 'no_face', 0.0, quality, False, ip, image_data)
+        _save_door_log(None, 'no_face', 0.0, qual, False, ip, image_data)
         return JsonResponse({
             'identified': False, 'error': 'Лицо не обнаружено',
             'quality_score': quality, 'recognition_confidence': 0.0
@@ -275,11 +277,11 @@ def api_identify(request):
     # Извлекаем вектор
     embedding = processor.get_embedding(face_tensor)
     if embedding is None:
-        _save_door_log(None, 'no_face', 0.0, quality, False, ip, image_data)
+        _save_door_log(None, 'no_face', 0.0, qual, False, ip, image_data)
         return JsonResponse({'identified': False, 'error': 'Ошибка извлечения признаков'})
 
     # Сравниваем со всеми зарегистрированными шаблонами
-    from apps.accounts.models import BiometricTemplate, CustomUser
+    from apps.accounts.models import BiometricTemplate
     templates = BiometricTemplate.objects.select_related('user').filter(
         user__is_active=True, user__is_biometric_registered=True
     )
@@ -299,13 +301,15 @@ def api_identify(request):
 
     threshold = cfg.recognition_threshold
 
+    best_sim = round(best_similarity * 100, 2)
+
     if best_similarity >= threshold and best_user is not None:
         # Пользователь идентифицирован
         door_opened = False
         if open_door:
             door_opened = _open_door()
 
-        _save_door_log(best_user, 'granted', best_similarity, quality, door_opened, ip, image_data)
+        _save_door_log(best_user, 'granted', best_sim, qual, door_opened, ip, image_data)
         write_system_log(
             'INFO', 'Домофон',
             f'Идентифицирован: {best_user.username}, схожесть: {best_similarity:.2%}',
@@ -325,7 +329,7 @@ def api_identify(request):
 
     else:
         # Никто не распознан
-        _save_door_log(None, 'denied', best_similarity, quality, False, ip, image_data)
+        _save_door_log(None, 'denied', best_sim, qual, False, ip, image_data)
         write_system_log(
             'WARNING', 'Домофон',
             f'Доступ запрещён. Лучшая схожесть: {best_similarity:.2%} (порог {threshold:.2%})'
@@ -373,7 +377,7 @@ def _save_door_log(user, result, confidence, quality, door_opened, ip, image_dat
                 img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
                 img.thumbnail((320, 240))
                 buf = io.BytesIO()
-                img.save(buf, format='JPEG', quality=75)
+                img.save(buf, format='JPEG', quality=100)
                 log.snapshot.save(f'door_{log.pk}.jpg', ContentFile(buf.getvalue()), save=True)
             except Exception:
                 pass

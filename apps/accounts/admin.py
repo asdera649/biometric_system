@@ -64,18 +64,18 @@ class BiometricTemplateAdmin(admin.ModelAdmin):
             obj.detection_confidence = round(result['detection_confidence'] * 100, 2)
             obj.image_quality_score = round(result['quality_score'] * 100, 2)
 
-            # try:
-            #     img = Image.open(io.BytesIO(raw_bytes)).convert('RGB')
-            #     img.thumbnail((200, 200))
-            #     thumb_io = io.BytesIO()
-            #     img.save(thumb_io, format='JPEG', quality=85)
-            #     obj.face_image.save(
-            #         f'user_{obj.user.pk}.jpg',
-            #         ContentFile(thumb_io.getvalue()),
-            #         save=False,
-            #     )
-            # except Exception:
-            #     pass
+            try:
+                img = Image.open(io.BytesIO(raw_bytes)).convert('RGB')
+                img.thumbnail((200, 200))
+                thumb_io = io.BytesIO()
+                img.save(thumb_io, format='JPEG', quality=100)
+                obj.face_image.save(
+                    f'user_{obj.user.pk}.jpg',
+                    ContentFile(thumb_io.getvalue()),
+                    save=False,
+                )
+            except Exception:
+                pass
 
             super().save_model(request, obj, form, change)
 
