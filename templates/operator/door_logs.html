@@ -71,9 +71,9 @@
           <td class="small">{{ log.quality_score|floatformat:1 }}%</td>
           <td>
             {% if log.door_opened %}
-              <i class="bi bi-door-open text-success"></i>
+              <i class="bi bi-unlock text-success" style="-webkit-text-stroke: .5px currentColor;"></i>
             {% else %}
-              <i class="bi bi-door-closed text-muted"></i>
+              <i class="bi bi-lock text-danger" style="-webkit-text-stroke: .5px currentColor;"></i>
             {% endif %}
           </td>
           <td>
