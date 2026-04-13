@@ -12,6 +12,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.conf import settings
 
+import requests
+import hashlib, hmac, time
+
 from apps.accounts.models import CustomUser, BiometricTemplate
 from apps.operator.models import SystemSettings
 from .models import AuthenticationLog, write_system_log
@@ -342,21 +345,46 @@ def api_identify(request):
             'door_opened': False
         })
 
-
 def _open_door() -> bool:
-    """
-    Заглушка - логика открытия замка.
+    url     = getattr(settings, 'DOOR_WEBHOOK_URL',    'http://localhost:5050/webhook/open')
+    secret  = getattr(settings, 'DOOR_WEBHOOK_SECRET', '')
+    timeout = getattr(settings, 'DOOR_WEBHOOK_TIMEOUT', 5)
 
-    """
-    # import logging
-    # logger = logging.getLogger('apps.biometric')
+    timestamp = str(int(time.time()))
+    payload   = {'action': 'open', 'timestamp': timestamp}
+
+    # HMAC-подпись. SHA-256(secret + timestamp)
+    signature = hmac.new(
+        secret.encode(),
+        timestamp.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    headers = {
+        'Content-Type':       'application/json',
+        'X-Webhook-Secret':   secret,      # простой вариант
+        'X-Webhook-Signature': signature,  # HMAC для прода
+        'X-Webhook-Timestamp': timestamp,
+    }
+
     try:
-
-
-        logger.info('Команда открытия двери отправлена')
-        return True
+        resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get('status') == 'ok':
+            logger.info(f'Дверь открыта через вебхук ({url})')
+            return True
+        else:
+            logger.warning(f'Вебхук вернул неожиданный ответ: {data}')
+            return False
+    except requests.exceptions.ConnectionError:
+        logger.error(f'Вебхук недоступен: {url}')
+        return False
+    except requests.exceptions.Timeout:
+        logger.error(f'Таймаут вебхука: {url}')
+        return False
     except Exception as e:
-        logger.error(f'Ошибка открытия двери: {e}')
+        logger.error(f'Ошибка вебхука: {e}')
         return False
 
 
