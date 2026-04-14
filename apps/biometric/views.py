@@ -346,7 +346,12 @@ def api_identify(request):
         })
 
 def _open_door() -> bool:
-    url     = getattr(settings, 'DOOR_WEBHOOK_URL',    'http://localhost:5050/webhook/open')
+    cfg = SystemSettings.get_settings()
+
+    if not cfg.use_webhook:
+        return False
+
+    url     = cfg.webhook_url #getattr(settings, 'DOOR_WEBHOOK_URL',    'http://localhost:5050/webhook/open')
     secret  = getattr(settings, 'DOOR_WEBHOOK_SECRET', '')
     timeout = getattr(settings, 'DOOR_WEBHOOK_TIMEOUT', 5)
 

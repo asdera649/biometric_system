@@ -336,6 +336,8 @@ def system_settings(request):
             max_att = int(request.POST.get('max_auth_attempts', 5))
             lockout = int(request.POST.get('lockout_minutes', 15))
             liveness_en = request.POST.get('liveness_enabled') == 'on'
+            use_webhook = request.POST.get('use_webhook') == 'on'
+            webhook_url = request.POST.get('webhook_url', '').strip()
 
             if not 0.1 <= rec_thr <= 1.0:
                 errors['recognition_threshold'] = 'Значение 0.1–1.0'
@@ -347,6 +349,12 @@ def system_settings(request):
                 errors['max_auth_attempts'] = 'Значение 1–20'
             if not 1 <= lockout <= 1440:
                 errors['lockout_minutes'] = 'Значение 1–1440'
+            if use_webhook and not webhook_url:
+                errors['webhook_url'] = 'Укажите URL вебхука.'
+            if use_webhook and webhook_url and not (
+                    webhook_url.startswith('http://') or webhook_url.startswith('https://')
+            ):
+                errors['webhook_url'] = 'URL должен начинаться с http:// или https://'
 
             if not errors:
                 cfg.recognition_threshold = rec_thr
@@ -355,6 +363,8 @@ def system_settings(request):
                 cfg.max_auth_attempts = max_att
                 cfg.lockout_minutes = lockout
                 cfg.liveness_enabled = liveness_en
+                cfg.use_webhook = use_webhook
+                cfg.webhook_url = webhook_url
                 cfg.save()
                 write_system_log('INFO', 'Настройки', 'Настройки системы обновлены', user=request.user)
                 messages.success(request, 'Настройки сохранены.')

@@ -4,7 +4,6 @@
 <div class="page-header">
   <h1><i class="bi bi-gear me-2 text-primary"></i>Настройки системы</h1>
 </div>
-<!--{% for msg in messages %}<div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} alert-dismissible"><button type="button" class="btn-close" data-bs-dismiss="alert"></button>{{ msg }}</div>{% endfor %}-->
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="card">
@@ -38,16 +37,6 @@
             {% if errors.quality_threshold %}<div class="text-danger small">{{ errors.quality_threshold }}</div>{% endif %}
           </div>
 
-<!--          <div class="mb-4">-->
-<!--            <label class="form-label fw-semibold text-muted">Порог живости (заглушка)</label>-->
-<!--            <div class="d-flex align-items-center gap-3">-->
-<!--              <input type="range" name="liveness_threshold" min="0.0" max="1.0" step="0.01"-->
-<!--                     value="{{ cfg.liveness_threshold }}" class="form-range flex-grow-1" disabled>-->
-<!--              <span class="fw-bold text-muted" style="min-width:45px">{{ cfg.liveness_threshold|floatformat:0 }}%</span>-->
-<!--            </div>-->
-<!--            <div class="text-muted small"><i class="bi bi-hourglass me-1"></i>Зарезервировано для модуля детекции живости.</div>-->
-<!--          </div>-->
-
           <hr>
           <div class="row g-3">
             <div class="col-md-6">
@@ -67,10 +56,26 @@
           <hr>
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" name="liveness_enabled" id="livenessSwitch" {% if cfg.liveness_enabled %}checked{% endif %} disabled>
-            <label class="form-check-label" for="livenessSwitch">
-              Детекция живости включена
-<!--              <span class="badge badge-warning ms-1">Заглушка</span>-->
-            </label>
+            <label class="form-check-label" for="livenessSwitch">Детекция живости включена</label>
+          </div>
+
+          <hr>
+          <div class="mb-3">
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" name="use_webhook" id="webhookSwitch"
+                     {% if cfg.use_webhook %}checked{% endif %}
+                     onchange="toggleWebhookUrl(this.checked)">
+              <label class="form-check-label fw-semibold" for="webhookSwitch">
+                Использовать вебхук
+              </label>
+            </div>
+            <div id="webhookUrlBlock" style="{% if not cfg.use_webhook %}display:none{% endif %}">
+              <label class="form-label fw-semibold">URL вебхука</label>
+              <input type="url" name="webhook_url" value="{{ cfg.webhook_url }}"
+                     class="form-control font-monospace" placeholder="http://localhost:5050/webhook/open"
+                     id="webhookUrlInput">
+              {% if errors.webhook_url %}<div class="text-danger small mt-1">{{ errors.webhook_url }}</div>{% endif %}
+            </div>
           </div>
 
           <button type="submit" class="btn btn-primary px-4">
@@ -96,13 +101,7 @@
     </div>
     <div class="card">
       <div class="card-header">Архитектура системы</div>
-      <div style="padding:1rem;font-size:.82rem">
-<!--        <div class="mb-2"><span class="badge badge-info me-1">Детекция</span>MTCNN (Multi-task CNN)</div>-->
-<!--        <div class="mb-2"><span class="badge badge-info me-1">Эмбеддинг</span>InceptionResNetV1 — 512d</div>-->
-<!--        <div class="mb-2"><span class="badge badge-info me-1">Предобучение</span>VGGFace2 (3.3M изображений)</div>-->
-<!--        <div class="mb-2"><span class="badge badge-info me-1">Метрика</span>Косинусное сходство</div>-->
-<!--        <div class="mb-2"><span class="badge badge-warning me-1">Живость</span>Liveness detection (план)</div>-->
-      </div>
+      <div style="padding:1rem;font-size:.82rem"></div>
     </div>
   </div>
 </div>
@@ -115,6 +114,10 @@
 
   function updateQualVal(val) {
     document.getElementById('qualVal').textContent = (val * 100).toFixed(0) + '%';
+  }
+
+  function toggleWebhookUrl(checked) {
+    document.getElementById('webhookUrlBlock').style.display = checked ? 'block' : 'none';
   }
 
   window.addEventListener('load', function() {

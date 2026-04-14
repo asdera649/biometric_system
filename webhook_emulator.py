@@ -61,25 +61,47 @@ def verify_signature(request_timestamp: str, signature: str) -> bool:
 # Логика открытия
 
 def open_door(ip: str, user: str, password: str, door_id: int = 1) -> bool:
-    log.info('ДВЕРЬ ОТКРЫТА (эмуляция)')
+    url = f"http://{ip}/ISAPI/AccessControl/RemoteControl/door/{door_id}"
+    headers = {"Content-Type": "application/xml; charset=UTF-8"}
+    payload = f"""<?xml version="1.0" encoding="UTF-8"?>
+<RemoteControlDoor>
+    <cmd>open</cmd>
+</RemoteControlDoor>"""
 
-#     url = f"http://{ip}/ISAPI/AccessControl/RemoteControl/door/{door_id}"
-#     headers = {"Content-Type": "application/xml; charset=UTF-8"}
-#     payload = """<?xml version="1.0" encoding="UTF-8"?>
-# <RemoteControlDoor>
-#     <cmd>open</cmd>
-# </RemoteControlDoor>"""
-#
-#     try:
-#         resp = requests.put(url, data=payload.encode("utf-8"), auth=HTTPDigestAuth(user, password), headers=headers, timeout=5)
-#         resp.raise_for_status()
-#         print(f"Попытка открыть дверь, код: {resp.status_code}")
-#         return resp.status_code == 200
-#     except requests.exceptions.RequestException as e:
-#         print(f"Ошибка открытия: {e}")
-#         return False
+    try:
+        log.info(f"Отправка команды открытия двери: {url}")
 
-    return True
+        resp = requests.put(
+            url,
+            data=payload.encode("utf-8"),
+            auth=HTTPDigestAuth(user, password),
+            headers=headers,
+            timeout=3
+        )
+
+        if resp.status_code == 200:
+            if b"<statusCode>1</statusCode>" in resp.content or b"<statusString>OK</statusString>" in resp.content:
+                log.info("Дверь открыта (подтверждено устройством)")
+                return True
+            else:
+                log.warning(f"Устройство ответило, но без подтверждения успеха: {resp.content[:200]}")
+                return False
+        else:
+            log.error(f"HTTP {resp.status_code}: {resp.content[:200]}")
+            return False
+
+    except requests.exceptions.Timeout:
+        log.error(f"Таймаут при подключении к {ip}")
+        return False
+    except requests.exceptions.ConnectionError:
+        log.error(f"Ошибка подключения к {ip}")
+        return False
+    except requests.exceptions.RequestException as e:
+        log.error(f"Ошибка открытия двери: {type(e).__name__}: {e}")
+        return False
+    except Exception as e:
+        log.exception(f"Неожиданная ошибка: {e}")
+        return False
 
 
 @app.route('/webhook/open', methods=['POST'])
@@ -88,9 +110,9 @@ def webhook_open():
     Принимает команду открытия двери от biometric-системы.
 
     Ожидаемые заголовки:
-        X-Webhook-Secret     — простой токен (быстрая проверка)
-        X-Webhook-Signature  — HMAC-SHA256 (строгая проверка)
-        X-Webhook-Timestamp  — Unix timestamp (защита от replay)
+        X-Webhook-Secret     — простой токен
+        X-Webhook-Signature  — HMAC-SHA256
+        X-Webhook-Timestamp  — Unix timestamp
 
     Body JSON:
         {"action": "open", "timestamp": "1234567890"}
