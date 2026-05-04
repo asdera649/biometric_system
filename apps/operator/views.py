@@ -4,15 +4,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse, HttpResponse
 from django.db.models import Count, Avg, Min, Max, Q
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 
-from apps.accounts.models import CustomUser, BiometricTemplate
+from apps.accounts.models import CustomUser
 from apps.biometric.models import AuthenticationLog, SystemLog, write_system_log
 from .models import SystemSettings, ModelMetricsSnapshot
-from apps.biometric.models import DoorAccessLog
 from apps.accounts.forms import UserEditForm
 
 logger = logging.getLogger('apps.operator')
@@ -336,8 +334,6 @@ def system_settings(request):
             max_att = int(request.POST.get('max_auth_attempts', 5))
             lockout = int(request.POST.get('lockout_minutes', 15))
             liveness_en = request.POST.get('liveness_enabled') == 'on'
-            use_webhook = request.POST.get('use_webhook') == 'on'
-            webhook_url = request.POST.get('webhook_url', '').strip()
 
             if not 0.1 <= rec_thr <= 1.0:
                 errors['recognition_threshold'] = 'Значение 0.1–1.0'
@@ -349,12 +345,6 @@ def system_settings(request):
                 errors['max_auth_attempts'] = 'Значение 1–20'
             if not 1 <= lockout <= 1440:
                 errors['lockout_minutes'] = 'Значение 1–1440'
-            if use_webhook and not webhook_url:
-                errors['webhook_url'] = 'Укажите URL вебхука.'
-            if use_webhook and webhook_url and not (
-                    webhook_url.startswith('http://') or webhook_url.startswith('https://')
-            ):
-                errors['webhook_url'] = 'URL должен начинаться с http:// или https://'
 
             if not errors:
                 cfg.recognition_threshold = rec_thr
@@ -363,8 +353,6 @@ def system_settings(request):
                 cfg.max_auth_attempts = max_att
                 cfg.lockout_minutes = lockout
                 cfg.liveness_enabled = liveness_en
-                cfg.use_webhook = use_webhook
-                cfg.webhook_url = webhook_url
                 cfg.save()
                 write_system_log('INFO', 'Настройки', 'Настройки системы обновлены', user=request.user)
                 messages.success(request, 'Настройки сохранены.')
@@ -373,32 +361,3 @@ def system_settings(request):
             messages.error(request, f'Ошибка валидации: {e}')
 
     return render(request, 'operator/settings.html', {'cfg': cfg, 'errors': errors})
-
-
-@operator_required
-def door_logs(request):
-    """Журнал доступа к домофону"""
-    qs = DoorAccessLog.objects.select_related('user').all()
-
-    result_filter = request.GET.get('result', '')
-    if result_filter:
-        qs = qs.filter(result=result_filter)
-
-    # Статистика за сутки
-    from django.utils import timezone
-    from datetime import timedelta
-    last_24h = timezone.now() - timedelta(hours=24)
-    stats_24h = DoorAccessLog.objects.filter(timestamp__gte=last_24h)
-
-    paginator = Paginator(qs, 30)
-    page = paginator.get_page(request.GET.get('page', 1))
-
-    ctx = {
-        'page': page,
-        'result_filter': result_filter,
-        'result_choices': DoorAccessLog.RESULT_CHOICES,
-        'total_24h': stats_24h.count(),
-        'granted_24h': stats_24h.filter(result='granted').count(),
-        'denied_24h': stats_24h.filter(result='denied').count(),
-    }
-    return render(request, 'operator/door_logs.html', ctx)

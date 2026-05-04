@@ -26,16 +26,6 @@ class SystemSettings(models.Model):
         'Детекция живости включена', default=False,
         help_text='Заглушка. Включить после интеграции модели.'
     )
-    use_webhook = models.BooleanField(
-        'Использовать вебхук', default=False,
-        help_text='Отправлять HTTP-запрос на URL вебхука при успешной идентификации у домофона.'
-    )
-    webhook_url = models.CharField(
-        'URL вебхука', max_length=500,
-        default='http://localhost:5050/webhook/open',
-        blank=True,
-        help_text='Эндпоинт, принимающий команду открытия двери.'
-    )
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
 
     class Meta:

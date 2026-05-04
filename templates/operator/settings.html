@@ -60,23 +60,7 @@
           </div>
 
           <hr>
-          <div class="mb-3">
-            <div class="form-check form-switch mb-3">
-              <input class="form-check-input" type="checkbox" name="use_webhook" id="webhookSwitch"
-                     {% if cfg.use_webhook %}checked{% endif %}
-                     onchange="toggleWebhookUrl(this.checked)">
-              <label class="form-check-label fw-semibold" for="webhookSwitch">
-                Использовать вебхук
-              </label>
-            </div>
-            <div id="webhookUrlBlock" style="{% if not cfg.use_webhook %}display:none{% endif %}">
-              <label class="form-label fw-semibold">URL вебхука</label>
-              <input type="url" name="webhook_url" value="{{ cfg.webhook_url }}"
-                     class="form-control font-monospace" placeholder="http://localhost:5050/webhook/open"
-                     id="webhookUrlInput">
-              {% if errors.webhook_url %}<div class="text-danger small mt-1">{{ errors.webhook_url }}</div>{% endif %}
-            </div>
-          </div>
+
 
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-save me-1"></i>Сохранить настройки
@@ -114,10 +98,6 @@
 
   function updateQualVal(val) {
     document.getElementById('qualVal').textContent = (val * 100).toFixed(0) + '%';
-  }
-
-  function toggleWebhookUrl(checked) {
-    document.getElementById('webhookUrlBlock').style.display = checked ? 'block' : 'none';
   }
 
   window.addEventListener('load', function() {

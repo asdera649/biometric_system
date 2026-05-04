@@ -6,12 +6,6 @@ SECRET_KEY = 'django-insecure-biometric-system-dev-key-change-in-production'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
-DOORBELL_SERVICE_TOKEN = 'токен-домофона'
-
-DOOR_WEBHOOK_URL     = 'http://localhost:5050/webhook/open'
-DOOR_WEBHOOK_SECRET  = 'webhook-token'
-DOOR_WEBHOOK_TIMEOUT = 5
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
