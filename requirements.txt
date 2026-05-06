@@ -1,3 +1,4 @@
+mediapipe
 Django==4.2.*
 facenet-pytorch>=2.5.3
 torch>=2.0

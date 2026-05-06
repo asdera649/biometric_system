@@ -1,17 +1,14 @@
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout
 from django.contrib import messages
-from django.utils import timezone
-from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 
-from .models import CustomUser, BiometricTemplate
+from .models import CustomUser
 from .forms import UserRegistrationForm, FaceLoginForm
-from apps.biometric.models import write_system_log, SystemLog
+from apps.biometric.models import write_system_log
 
 logger = logging.getLogger('apps.accounts')
-
 
 def home(request):
     info_blocks = [
