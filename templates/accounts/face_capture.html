@@ -2,151 +2,68 @@
 {% block title %}Аутентификация — Сканирование{% endblock %}
 {% block layout %}
 <div class="auth-page">
-  <div style="width:100%;max-width:560px">
+  <div style="width:100%;max-width:540px">
     <div style="background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden">
-
-      <!-- Заголовок -->
-      <div class="auth-header" id="pageHeader">
-        <i class="bi bi-person-bounding-box" id="headerIcon"></i>
-        <h4 class="mb-0 fw-bold" id="headerTitle">Сканирование лица</h4>
-        <p class="mb-0 opacity-75 small mt-1" id="headerSub">
-          Пользователь: <strong>{{ username }}</strong>
-        </p>
+      <div class="auth-header">
+        <i class="bi bi-person-bounding-box"></i>
+        <h4 class="mb-0 fw-bold">Сканирование лица</h4>
+        <p class="mb-0 opacity-75 small mt-1">Пользователь: <strong>{{ username }}</strong></p>
       </div>
-
       <div style="padding:1.5rem 2rem">
-
-        <!-- Видеопоток -->
         <div style="position:relative;border-radius:12px;overflow:hidden;background:#0f172a;margin-bottom:1rem">
-          <video id="cameraFeed" autoplay playsinline
-                 style="width:100%;display:block;max-height:320px;object-fit:cover"></video>
+          <video id="cameraFeed" autoplay playsinline style="width:100%;display:block;max-height:320px;object-fit:cover"></video>
           <canvas id="snapshot" style="display:none"></canvas>
           <div class="face-overlay" id="faceOverlay"></div>
-          <!-- Таймер challenge -->
-          <div id="challengeTimer"
-               style="display:none;position:absolute;top:8px;right:12px;background:rgba(0,0,0,.6);
-                      color:#fff;border-radius:8px;padding:.25rem .6rem;font-size:.85rem;font-weight:600">
-            <i class="bi bi-clock me-1"></i><span id="timerVal">45</span>s
-          </div>
+          <div id="countdown" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4rem;font-weight:800;color:#fff;display:none;text-shadow:0 2px 12px rgba(0,0,0,.8)"></div>
         </div>
-
-        <!-- Метрики (шаг 1) -->
         <div class="row g-2 mb-3" id="metricsRow" style="display:none">
           <div class="col-6">
             <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
               <div class="text-muted" style="font-size:.7rem">Уверенность распознавания</div>
-              <div class="metric-bar mt-1">
-                <div class="metric-bar-fill" id="confBar" style="background:#1a56db;width:0%"></div>
-              </div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="confBar" style="background:#1a56db;width:0%"></div></div>
               <div class="fw-bold small mt-1" id="confVal">—</div>
             </div>
           </div>
           <div class="col-6">
             <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
               <div class="text-muted" style="font-size:.7rem">Качество изображения</div>
-              <div class="metric-bar mt-1">
-                <div class="metric-bar-fill" id="qualBar" style="background:#059669;width:0%"></div>
-              </div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="qualBar" style="background:#059669;width:0%"></div></div>
               <div class="fw-bold small mt-1" id="qualVal">—</div>
             </div>
           </div>
         </div>
-
-        <!-- ── Блок активного challenge ──────────────────────────────────── -->
-        <div id="challengeBlock" style="display:none;margin-bottom:1rem">
-          <div id="challengeCard"
-               style="border-radius:14px;padding:1.1rem 1.25rem;
-                      background:linear-gradient(135deg,#ede9fe,#dbeafe);
-                      border:1.5px solid #a5b4fc">
-            <div class="d-flex align-items-center gap-3">
-              <div id="challengeIconWrap"
-                   style="width:48px;height:48px;border-radius:12px;background:#fff;
-                          display:flex;align-items:center;justify-content:center;
-                          box-shadow:0 2px 8px rgba(0,0,0,.12);flex-shrink:0">
-                <i id="challengeIcon" class="bi bi-eye" style="font-size:1.6rem;color:#7c3aed"></i>
-              </div>
-              <div style="flex:1">
-                <div class="fw-bold" style="color:#3730a3;font-size:1rem" id="challengeLabel">
-                  Выполните задание
-                </div>
-                <div class="text-muted small" id="challengeHint">Подождите…</div>
-              </div>
-            </div>
-            <!-- Прогресс-бар задания -->
-            <div style="margin-top:.85rem">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="text-muted" style="font-size:.72rem">Прогресс задания</span>
-                <span id="progressText" class="fw-bold" style="font-size:.72rem;color:#7c3aed">0%</span>
-              </div>
-              <div class="metric-bar">
-                <div id="challengeProgress"
-                     class="metric-bar-fill"
-                     style="background:linear-gradient(90deg,#7c3aed,#3b82f6);width:0%;transition:width .25s"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Статус верификации личности (same-person) -->
-          <div id="identityStatus" class="d-flex align-items-center gap-2 mt-2" style="font-size:.8rem">
-            <i class="bi bi-person-check text-success"></i>
-            <span class="text-muted">Верификация личности: <span id="identityText">ожидание…</span></span>
-          </div>
-        </div>
-        <!-- ─────────────────────────────────────────────────────────────── -->
-
-        <!-- Статусное сообщение -->
+<!--        <div id="livenessPlaceholder" class="alert alert-secondary py-2 small mb-3">-->
+<!--          <i class="bi bi-camera-video me-1"></i>-->
+<!--          <strong>Детекция живости:</strong> модуль в разработке (заглушка)-->
+<!--        </div>-->
         <div id="statusMsg" class="alert py-2 d-none"></div>
-
-        <!-- Кнопка подтверждения (шаг 1) -->
         <button id="authBtn" class="btn btn-primary w-100 py-2 fw-semibold" disabled>
           <i class="bi bi-person-check me-1"></i>Подтвердить личность
         </button>
-
-        <!-- Кнопка отмены challenge (шаг 2) -->
-        <button id="cancelChallengeBtn" class="btn btn-outline-secondary w-100 mt-2 py-2 d-none"
-                onclick="cancelChallenge()">
-          <i class="bi bi-x-circle me-1"></i>Отменить и попробовать снова
-        </button>
-
-        <a href="{% url 'face_login' %}" id="backLink"
-           class="btn btn-outline-secondary w-100 mt-2 py-2">Назад</a>
+        <a href="{% url 'face_login' %}" class="btn btn-outline-secondary w-100 mt-2 py-2">Назад</a>
       </div>
-
     </div>
   </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
-const USERNAME  = "{{ username }}";
-const CSRF      = "{{ csrf_token }}";
-let stream       = null;
-let busy         = false;          // шаг 1 в процессе
-let inChallenge  = false;          // шаг 2 активен
-let frameTimer   = null;           // setInterval для кадров
-let countdownTimer = null;         // таймер обратного отсчёта
-let secondsLeft  = 45;
-
-// ── Камера ──────────────────────────────────────────────────────────────────
+const USERNAME = "{{ username }}";
+const CSRF = "{{ csrf_token }}";
+let stream = null, busy = false;
 
 async function startCamera() {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480, facingMode: 'user' }
-    });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
     document.getElementById('cameraFeed').srcObject = stream;
     document.getElementById('authBtn').disabled = false;
-  } catch (e) {
+  } catch(e) {
     setStatus('danger', '<i class="bi bi-camera-video-off me-1"></i>Нет доступа к камере: ' + e.message);
   }
 }
 
-// ── Утилиты ─────────────────────────────────────────────────────────────────
-
 function setStatus(type, msg) {
   const el = document.getElementById('statusMsg');
-  if (!msg) { el.classList.add('d-none'); return; }
   el.className = 'alert alert-' + type + ' py-2';
   el.innerHTML = msg;
   el.classList.remove('d-none');
@@ -154,237 +71,58 @@ function setStatus(type, msg) {
 
 function showMetrics(conf, qual) {
   document.getElementById('metricsRow').style.display = 'flex';
-  document.getElementById('confBar').style.width  = (conf * 100).toFixed(1) + '%';
-  document.getElementById('confVal').textContent  = (conf * 100).toFixed(1) + '%';
-  document.getElementById('qualBar').style.width  = (qual * 100).toFixed(1) + '%';
-  document.getElementById('qualVal').textContent  = (qual * 100).toFixed(1) + '%';
+  document.getElementById('confBar').style.width = (conf * 100) + '%';
+  document.getElementById('confVal').textContent = (conf * 100).toFixed(1) + '%';
+  document.getElementById('qualBar').style.width = (qual * 100) + '%';
+  document.getElementById('qualVal').textContent = (qual * 100).toFixed(1) + '%';
 }
-
-function captureFrame() {
-  const video  = document.getElementById('cameraFeed');
-  const canvas = document.getElementById('snapshot');
-  canvas.width  = video.videoWidth  || 640;
-  canvas.height = video.videoHeight || 480;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.85);
-}
-
-async function post(url, body) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-    body: JSON.stringify(body),
-  });
-  return resp.json();
-}
-
-// ── Шаг 1: Распознавание лица ────────────────────────────────────────────────
 
 document.getElementById('authBtn').addEventListener('click', async () => {
   if (busy) return;
   busy = true;
   const btn = document.getElementById('authBtn');
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Обработка…';
-  btn.disabled  = true;
+  btn.disabled = true;
+
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('snapshot');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.9);
 
   try {
-    const imageData = captureFrame();
-    const data = await post('/biometric/api/authenticate/', {
-      username: USERNAME, image_data: imageData
+    const resp = await fetch('/biometric/api/authenticate/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ username: USERNAME, image_data: imageData })
     });
-
+    const data = await resp.json();
     showMetrics(data.recognition_confidence || 0, data.quality_score || 0);
-
     if (data.success) {
-      // Liveness выключен или пассивный тест принял сразу
-      onAuthSuccess(data.redirect_url);
-      return;
-    }
-
-    if (data.needs_challenge) {
-      // Запустить активный challenge
-      enterChallengeMode(data);
+      document.getElementById('faceOverlay').className = 'face-overlay good';
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      setStatus('success', '<i class="bi bi-check-circle me-1"></i>Аутентификация успешна! Перенаправление…');
+      setTimeout(() => window.location.href = data.redirect_url || '/accounts/success/', 1500);
+    } else {
+      document.getElementById('faceOverlay').className = 'face-overlay bad';
+      let msg = '<i class="bi bi-x-circle me-1"></i>' + data.error;
+      if (data.attempts_left !== undefined && data.attempts_left > 0) {
+        msg += ` <span class="text-muted">(осталось попыток: ${data.attempts_left})</span>`;
+      }
+      setStatus('danger', msg);
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
+      btn.disabled = false;
       busy = false;
-      return;
     }
-
-    // Ошибка распознавания
-    document.getElementById('faceOverlay').className = 'face-overlay bad';
-    let msg = '<i class="bi bi-x-circle me-1"></i>' + (data.error || 'Ошибка распознавания');
-    if (data.attempts_left !== undefined && data.attempts_left > 0) {
-      msg += ` <span class="text-muted">(осталось попыток: ${data.attempts_left})</span>`;
-    }
-    setStatus('danger', msg);
-    btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
-    btn.disabled  = false;
-    busy = false;
-
-  } catch (e) {
+  } catch(e) {
     setStatus('danger', 'Ошибка сети: ' + e.message);
     btn.innerHTML = '<i class="bi bi-person-check me-1"></i>Подтвердить личность';
-    btn.disabled  = false;
+    btn.disabled = false;
     busy = false;
   }
 });
 
-// ── Шаг 2: Активный challenge ─────────────────────────────────────────────────
-
-function enterChallengeMode(data) {
-  inChallenge = true;
-  secondsLeft = 45;
-
-  // Обновить UI
-  document.getElementById('authBtn').classList.add('d-none');
-  document.getElementById('backLink').classList.add('d-none');
-  document.getElementById('cancelChallengeBtn').classList.remove('d-none');
-  document.getElementById('challengeBlock').style.display = 'block';
-  document.getElementById('challengeTimer').style.display = 'block';
-  document.getElementById('metricsRow').style.display = 'none';
-  setStatus('', '');
-
-  // Заголовок страницы
-  document.getElementById('pageHeader').style.background =
-    'linear-gradient(135deg, #7c3aed, #4f46e5)';
-  document.getElementById('headerIcon').className = 'bi bi-shield-check';
-  document.getElementById('headerTitle').textContent = 'Проверка живости';
-  document.getElementById('headerSub').innerHTML =
-    'Пользователь: <strong>' + USERNAME + '</strong>';
-
-  // Challenge card
-  document.getElementById('challengeIcon').className =
-    'bi bi-' + (data.challenge_icon || 'eye') + ' fs-3';
-  document.getElementById('challengeLabel').textContent =
-    data.challenge_label || 'Выполните задание';
-  document.getElementById('challengeHint').textContent =
-    'Смотрите в камеру и выполните действие';
-
-  // Обратный отсчёт
-  document.getElementById('timerVal').textContent = secondsLeft;
-  countdownTimer = setInterval(() => {
-    secondsLeft--;
-    document.getElementById('timerVal').textContent = secondsLeft;
-    if (secondsLeft <= 10) {
-      document.getElementById('timerVal').parentElement.style.background =
-        'rgba(220,38,38,.75)';
-    }
-  }, 1000);
-
-  // Отправка кадров
-  frameTimer = setInterval(sendChallengeFrame, 350);
-}
-
-async function sendChallengeFrame() {
-  if (!inChallenge) return;
-  try {
-    const imageData = captureFrame();
-    const data = await post('/biometric/api/liveness/frame/', { image_data: imageData });
-
-    // Обновить прогресс
-    if (data.progress !== undefined) {
-      const pct = Math.round(data.progress * 100);
-      document.getElementById('challengeProgress').style.width = pct + '%';
-      document.getElementById('progressText').textContent = pct + '%';
-    }
-
-    // Статус верификации личности
-    updateIdentityStatus(data.identity_ok, data.identity_score);
-
-    if (data.success) {
-      // Challenge пройден → логин
-      clearInterval(frameTimer);
-      clearInterval(countdownTimer);
-      onAuthSuccess(data.redirect_url);
-      return;
-    }
-
-    if (data.abort) {
-      // Критическая ошибка (подмена личности / таймаут)
-      clearInterval(frameTimer);
-      clearInterval(countdownTimer);
-      inChallenge = false;
-      document.getElementById('faceOverlay').className = 'face-overlay bad';
-      setStatus('danger', '<i class="bi bi-x-octagon me-1"></i>' + (data.error || 'Проверка живости провалена'));
-      exitChallengeMode(false);
-      return;
-    }
-
-    // Обновляем таймер по серверному значению (синхронизация)
-    if (data.seconds_left !== undefined) {
-      secondsLeft = data.seconds_left;
-    }
-
-  } catch (e) {
-    // Сетевые ошибки — игнорируем один кадр, продолжаем
-    console.warn('Frame error:', e.message);
-  }
-}
-
-function updateIdentityStatus(ok, score) {
-  const wrap  = document.getElementById('identityStatus');
-  const icon  = wrap.querySelector('i');
-  const text  = document.getElementById('identityText');
-
-  if (score === undefined || score < 0) {
-    // Лицо не обнаружено в этом кадре — нормально при повороте
-    icon.className = 'bi bi-person-dash text-muted';
-    text.textContent = 'ожидание…';
-    return;
-  }
-
-  if (ok) {
-    icon.className = 'bi bi-person-check text-success';
-    text.textContent = 'подтверждена (' + (score * 100).toFixed(0) + '%)';
-  } else {
-    icon.className = 'bi bi-person-x text-danger';
-    text.textContent = 'несоответствие!';
-  }
-}
-
-async function cancelChallenge() {
-  clearInterval(frameTimer);
-  clearInterval(countdownTimer);
-  inChallenge = false;
-  try { await post('/biometric/api/liveness/cancel/', {}); } catch (_) {}
-  exitChallengeMode(true);
-}
-
-function exitChallengeMode(allowRetry) {
-  document.getElementById('challengeBlock').style.display  = 'none';
-  document.getElementById('challengeTimer').style.display  = 'none';
-  document.getElementById('cancelChallengeBtn').classList.add('d-none');
-  document.getElementById('backLink').classList.remove('d-none');
-
-  document.getElementById('pageHeader').style.background =
-    'linear-gradient(135deg,#1a56db,#0ea5e9)';
-  document.getElementById('headerIcon').className   = 'bi bi-person-bounding-box';
-  document.getElementById('headerTitle').textContent = 'Сканирование лица';
-  document.getElementById('faceOverlay').className  = 'face-overlay';
-
-  if (allowRetry) {
-    const btn = document.getElementById('authBtn');
-    btn.classList.remove('d-none');
-    btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
-    btn.disabled  = false;
-    setStatus('warning', '<i class="bi bi-exclamation-circle me-1"></i>Проверка отменена. Попробуйте ещё раз.');
-  } else {
-    // После жёсткого сброса — показываем кнопку с задержкой
-    setTimeout(() => {
-      const btn = document.getElementById('authBtn');
-      btn.classList.remove('d-none');
-      btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
-      btn.disabled  = false;
-    }, 2000);
-  }
-}
-
-function onAuthSuccess(redirectUrl) {
-  document.getElementById('faceOverlay').className = 'face-overlay good';
-  if (stream) stream.getTracks().forEach(t => t.stop());
-  setStatus('success', '<i class="bi bi-check-circle me-1"></i>Аутентификация успешна! Перенаправление…');
-  setTimeout(() => { window.location.href = redirectUrl || '/accounts/success/'; }, 1200);
-}
-
-// ── Запуск ───────────────────────────────────────────────────────────────────
 startCamera();
 </script>
 {% endblock %}
