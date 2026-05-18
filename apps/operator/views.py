@@ -1,5 +1,7 @@
 import logging
+import os
 from datetime import timedelta
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -17,7 +19,7 @@ logger = logging.getLogger('apps.operator')
 
 
 def operator_required(view_func):
-    """Декоратор: доступ только для операторов"""
+    """Декоратор: доступ только для операторов."""
     @login_required
     def wrapped(request, *args, **kwargs):
         if not request.user.is_operator and not request.user.is_superuser:
@@ -29,38 +31,33 @@ def operator_required(view_func):
 
 @operator_required
 def dashboard(request):
-    """Главная панель оператора"""
     now = timezone.now()
     last_24h = now - timedelta(hours=24)
-    last_7d = now - timedelta(days=7)
 
-    # Статистика за 24 часа
     logs_24h = AuthenticationLog.objects.filter(timestamp__gte=last_24h)
     total_24h = logs_24h.count()
     success_24h = logs_24h.filter(result='success').count()
     fail_24h = total_24h - success_24h
 
-    # Общая статистика
     total_users = CustomUser.objects.filter(is_active=True).count()
     bio_users = CustomUser.objects.filter(is_biometric_registered=True).count()
     locked_users = CustomUser.objects.filter(locked_until__gt=now).count()
 
-    # График активности по часам (последние 24ч)
     hourly_data = []
     for i in range(23, -1, -1):
-        hour_start = now - timedelta(hours=i+1)
+        hour_start = now - timedelta(hours=i + 1)
         hour_end = now - timedelta(hours=i)
-        cnt = AuthenticationLog.objects.filter(timestamp__gte=hour_start, timestamp__lt=hour_end).count()
+        cnt = AuthenticationLog.objects.filter(
+            timestamp__gte=hour_start, timestamp__lt=hour_end
+        ).count()
         hourly_data.append({'hour': hour_end.strftime('%H:00'), 'count': cnt})
 
-    # Последние события
     recent_logs = AuthenticationLog.objects.select_related('user')[:10]
     recent_system_logs = SystemLog.objects.all()[:5]
 
-    # Метрики нейросети
     avg_metrics = logs_24h.aggregate(
         avg_conf=Avg('recognition_confidence'),
-        avg_quality=Avg('quality_score')
+        avg_quality=Avg('quality_score'),
     )
 
     ctx = {
@@ -75,13 +72,10 @@ def dashboard(request):
     }
     return render(request, 'operator/dashboard.html', ctx)
 
-
 @operator_required
 def auth_logs(request):
-    """Журнал аутентификации с фильтрацией"""
     qs = AuthenticationLog.objects.select_related('user').all()
 
-    # Фильтры
     result_filter = request.GET.get('result', '')
     user_filter = request.GET.get('username', '').strip()
     date_from = request.GET.get('date_from', '')
@@ -111,10 +105,8 @@ def auth_logs(request):
     }
     return render(request, 'operator/auth_logs.html', ctx)
 
-
 @operator_required
 def system_logs(request):
-    """Системный журнал"""
     qs = SystemLog.objects.select_related('user').all()
 
     level_filter = request.GET.get('level', '')
@@ -126,7 +118,6 @@ def system_logs(request):
 
     paginator = Paginator(qs, 30)
     page = paginator.get_page(request.GET.get('page', 1))
-
     components = SystemLog.objects.values_list('component', flat=True).distinct()
 
     ctx = {
@@ -135,10 +126,8 @@ def system_logs(request):
     }
     return render(request, 'operator/system_logs.html', ctx)
 
-
 @operator_required
 def users_list(request):
-    """Управление пользователями"""
     qs = CustomUser.objects.all()
     search = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '')
@@ -163,10 +152,8 @@ def users_list(request):
     ctx = {'page': page, 'search': search, 'status_filter': status_filter}
     return render(request, 'operator/users_list.html', ctx)
 
-
 @operator_required
 def user_detail(request, user_id):
-    """Детальная информация о пользователе"""
     target = get_object_or_404(CustomUser, pk=user_id)
     logs = AuthenticationLog.objects.filter(user=target)[:20]
     last_success = AuthenticationLog.objects.filter(user=target, result='success').first()
@@ -213,14 +200,11 @@ def user_detail(request, user_id):
     ctx = {'target': target, 'logs': logs, 'last_success': last_success, 'edit_form': edit_form}
     return render(request, 'operator/user_detail.html', ctx)
 
-
 @operator_required
 def reports(request):
-    """Отчёты и метрики качества нейросети"""
     period = request.GET.get('period', '7')
     try:
-        days = int(period)
-        days = max(1, min(days, 365))
+        days = max(1, min(int(period), 365))
     except ValueError:
         days = 7
 
@@ -232,12 +216,9 @@ def reports(request):
     success = logs.filter(result='success').count()
 
     metrics = logs.aggregate(
-        avg_conf=Avg('recognition_confidence'),
-        min_conf=Min('recognition_confidence'),
-        max_conf=Max('recognition_confidence'),
-        avg_q=Avg('quality_score'),
-        min_q=Min('quality_score'),
-        max_q=Max('quality_score'),
+        avg_conf=Avg('recognition_confidence'), min_conf=Min('recognition_confidence'),
+        max_conf=Max('recognition_confidence'), avg_q=Avg('quality_score'),
+        min_q=Min('quality_score'), max_q=Max('quality_score'),
     )
 
     cfg = SystemSettings.get_settings()
@@ -250,7 +231,6 @@ def reports(request):
                      .values_list('result', 'cnt')
     }
 
-    # Динамика по дням
     daily_data = []
     for i in range(days - 1, -1, -1):
         day = (now - timedelta(days=i)).date()
@@ -263,13 +243,11 @@ def reports(request):
             'avg_qual': round(day_logs.aggregate(a=Avg('quality_score'))['a'] or 0, 3),
         })
 
-    # Последние сохранённые снимки
     snapshots = ModelMetricsSnapshot.objects.all()[:5]
 
     ctx = {
         'period': days, 'period_from': period_from,
-        'total': total, 'success': success,
-        'fail': total - success,
+        'total': total, 'success': success, 'fail': total - success,
         'success_rate': round(success / total * 100, 1) if total else 0,
         'metrics': metrics, 'cfg': cfg,
         'above_threshold_conf': above_threshold_conf,
@@ -278,15 +256,14 @@ def reports(request):
         'result_labels': dict(AuthenticationLog.RESULT_CHOICES),
         'daily_data': daily_data,
         'snapshots': snapshots,
-        'period_options': [(1,'Сегодня'),(7,'7 дней'),(14,'14 дней'),(30,'30 дней'),(90,'90 дней')],
+        'period_options': [(1, 'Сегодня'), (7, '7 дней'), (14, '14 дней'),
+                           (30, '30 дней'), (90, '90 дней')],
     }
     return render(request, 'operator/reports.html', ctx)
-
 
 @operator_required
 @require_POST
 def save_metrics_snapshot(request):
-    """Сохранить снимок метрик"""
     period = int(request.POST.get('period', 7))
     now = timezone.now()
     period_from = now - timedelta(days=period)
@@ -306,7 +283,8 @@ def save_metrics_snapshot(request):
         avg_recognition_confidence=m['avg_conf'] or 0,
         min_recognition_confidence=m['min_conf'] or 0,
         max_recognition_confidence=m['max_conf'] or 0,
-        recognition_above_threshold=logs.filter(recognition_confidence__gte=cfg.recognition_threshold).count(),
+        recognition_above_threshold=logs.filter(
+            recognition_confidence__gte=cfg.recognition_threshold).count(),
         avg_quality_score=m['avg_q'] or 0,
         min_quality_score=m['min_q'] or 0,
         max_quality_score=m['max_q'] or 0,
@@ -315,49 +293,112 @@ def save_metrics_snapshot(request):
         fail_quality_count=logs.filter(result='fail_quality').count(),
         fail_recognition_count=logs.filter(result='fail_recognition').count(),
     )
-    write_system_log('INFO', 'Отчёты', f'Сохранён снимок метрик за {period} дней', user=request.user)
+    write_system_log('INFO', 'Отчёты', f'Сохранён снимок метрик за {period} дней',
+                     user=request.user)
     messages.success(request, f'Снимок метрик сохранён (#{snap.pk})')
     return redirect('reports')
 
-
 @operator_required
 def system_settings(request):
-    """Настройки системы"""
     cfg = SystemSettings.get_settings()
     errors = {}
 
     if request.method == 'POST':
         try:
-            rec_thr = float(request.POST.get('recognition_threshold', 0.65))
+            rec_thr  = float(request.POST.get('recognition_threshold', 0.65))
             qual_thr = float(request.POST.get('quality_threshold', 0.35))
             live_thr = float(request.POST.get('liveness_threshold', 0.70))
-            max_att = int(request.POST.get('max_auth_attempts', 5))
-            lockout = int(request.POST.get('lockout_minutes', 15))
-            liveness_en = request.POST.get('liveness_enabled') == 'on'
+            max_att  = int(request.POST.get('max_auth_attempts', 5))
+            lockout  = int(request.POST.get('lockout_minutes', 15))
+            live_en  = request.POST.get('liveness_enabled') == 'on'
 
+            # Валидация
             if not 0.1 <= rec_thr <= 1.0:
-                errors['recognition_threshold'] = 'Значение 0.1–1.0'
+                errors['recognition_threshold'] = 'Допустимое значение: 0.1–1.0'
             if not 0.0 <= qual_thr <= 1.0:
-                errors['quality_threshold'] = 'Значение 0.0–1.0'
+                errors['quality_threshold'] = 'Допустимое значение: 0.0–1.0'
             if not 0.0 <= live_thr <= 1.0:
-                errors['liveness_threshold'] = 'Значение 0.0–1.0'
+                errors['liveness_threshold'] = 'Допустимое значение: 0.0–1.0'
             if not 1 <= max_att <= 20:
-                errors['max_auth_attempts'] = 'Значение 1–20'
+                errors['max_auth_attempts'] = 'Допустимое значение: 1–20'
             if not 1 <= lockout <= 1440:
-                errors['lockout_minutes'] = 'Значение 1–1440'
+                errors['lockout_minutes'] = 'Допустимое значение: 1–1440 мин'
+
+            # Нельзя включить живость если сервис не загружен
+            if live_en:
+                status = _get_liveness_status()
+                if not status.get('available'):
+                    errors['liveness_threshold'] = (
+                        'Невозможно включить проверку живости: сервис недоступен. '
+                        'Убедитесь что .pth модели размещены правильно.'
+                    )
 
             if not errors:
                 cfg.recognition_threshold = rec_thr
-                cfg.quality_threshold = qual_thr
-                cfg.liveness_threshold = live_thr
-                cfg.max_auth_attempts = max_att
-                cfg.lockout_minutes = lockout
-                cfg.liveness_enabled = liveness_en
+                cfg.quality_threshold     = qual_thr
+                cfg.liveness_threshold    = live_thr
+                cfg.max_auth_attempts     = max_att
+                cfg.lockout_minutes       = lockout
+                cfg.liveness_enabled      = live_en
                 cfg.save()
-                write_system_log('INFO', 'Настройки', 'Настройки системы обновлены', user=request.user)
+
+                write_system_log(
+                    'INFO', 'Настройки',
+                    f'Настройки обновлены',
+                    user=request.user,
+                )
                 messages.success(request, 'Настройки сохранены.')
                 return redirect('system_settings')
+
         except (ValueError, TypeError) as e:
             messages.error(request, f'Ошибка валидации: {e}')
 
-    return render(request, 'operator/settings.html', {'cfg': cfg, 'errors': errors})
+    ctx = {
+        'cfg': cfg,
+        'errors': errors,
+        'liveness_status': _get_liveness_status(),
+    }
+    return render(request, 'operator/settings.html', ctx)
+
+def _get_liveness_status() -> dict:
+    """
+    Возвращает словарь со статусом liveness-сервиса для шаблона настроек.
+    Никогда не бросает исключений.
+
+    Возможные варианты:
+      {}                              - LIVENESS_CONFIG['ENABLED'] = False
+      {'available': True, ...}        - сервис работает
+      {'available': False, 'error':.} - сервис включён, но не работает
+    """
+    from django.conf import settings as django_settings
+    liveness_cfg = getattr(django_settings, 'LIVENESS_CONFIG', {})
+
+    if not liveness_cfg.get('ENABLED', False):
+        return {}
+
+    try:
+        from apps.liveness.service import LivenessService
+        svc = LivenessService.get_instance()
+
+        if not svc.loaded_models:
+            return {
+                'available': False,
+                'error': (
+                    f'Сервис инициализирован, но модели не загружены. '
+                    f'Проверьте содержимое папки: {svc.model_dir}'
+                ),
+            }
+
+        return {
+            'available': True,
+            'models_count': len(svc.loaded_models),
+            'device': str(svc.device),
+            'models': [os.path.basename(p) for p in svc.loaded_models],
+        }
+
+    except Exception as exc:
+        logger.warning('Liveness status check failed: %s', exc)
+        return {
+            'available': False,
+            'error': str(exc),
+        }

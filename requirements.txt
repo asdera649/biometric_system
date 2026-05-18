@@ -1,11 +1,26 @@
 Django==4.2.*
+
+# Face recognition
 facenet-pytorch>=2.5.3
 torch>=2.0
 torchvision>=0.15
+
+# Image processing
 opencv-python-headless>=4.8
 Pillow>=10.0
 numpy>=1.24
-scipy>=1.10
+
+# Liveness: MiniFASNet требует easydict
+easydict>=1.9
+
+# REST
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.1
+
+# Forms / UI
 django-crispy-forms>=2.1
 crispy-bootstrap5>=0.7
+
+# Misc
+scipy>=1.10
 psutil>=5.9

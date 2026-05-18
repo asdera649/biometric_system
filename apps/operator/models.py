@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class SystemSettings(models.Model):
     """Настройки системы (singleton)"""
     recognition_threshold = models.FloatField(
@@ -12,19 +11,19 @@ class SystemSettings(models.Model):
         help_text='0.0–1.0. Минимальное качество лица для обработки.'
     )
     liveness_threshold = models.FloatField(
-        'Порог живости (заглушка)', default=0.70,
-        help_text='0.0–1.0. Зарезервировано для детекции живости.'
+        'Порог живости', default=0.70,
+        help_text='0.0–1.0.'
     )
     max_auth_attempts = models.PositiveIntegerField(
         'Макс. попыток входа', default=5,
-        help_text='После превышения — блокировка аккаунта.'
+        help_text='После превышения - блокировка аккаунта.'
     )
     lockout_minutes = models.PositiveIntegerField(
         'Время блокировки (мин)', default=15
     )
     liveness_enabled = models.BooleanField(
-        'Детекция живости включена', default=False,
-        help_text='Заглушка. Включить после интеграции модели.'
+        'Обнаружение живости включена', default=False,
+        help_text=''
     )
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
 

@@ -16,6 +16,8 @@
           <div class="face-overlay" id="faceOverlay"></div>
           <div id="countdown" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4rem;font-weight:800;color:#fff;display:none;text-shadow:0 2px 12px rgba(0,0,0,.8)"></div>
         </div>
+
+        <!-- Метрики распознавания -->
         <div class="row g-2 mb-3" id="metricsRow" style="display:none">
           <div class="col-6">
             <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
@@ -32,11 +34,20 @@
             </div>
           </div>
         </div>
-<!--        <div id="livenessPlaceholder" class="alert alert-secondary py-2 small mb-3">-->
-<!--          <i class="bi bi-camera-video me-1"></i>-->
-<!--          <strong>Детекция живости:</strong> модуль в разработке (заглушка)-->
-<!--        </div>-->
+
+        <!-- Метрика живости (показывается только при liveness_enabled) -->
+        <div class="row g-2 mb-3" id="livenessMetricRow" style="display:none">
+          <div class="col-12">
+            <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0">
+              <div class="text-muted" style="font-size:.7rem">Проверка живости</div>
+              <div class="metric-bar mt-1"><div class="metric-bar-fill" id="livenessBar" style="background:#7c3aed;width:0%"></div></div>
+              <div class="fw-bold small mt-1" id="livenessVal">—</div>
+            </div>
+          </div>
+        </div>
+
         <div id="statusMsg" class="alert py-2 d-none"></div>
+
         <button id="authBtn" class="btn btn-primary w-100 py-2 fw-semibold" disabled>
           <i class="bi bi-person-check me-1"></i>Подтвердить личность
         </button>
@@ -46,6 +57,7 @@
   </div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
 const USERNAME = "{{ username }}";
@@ -54,7 +66,9 @@ let stream = null, busy = false;
 
 async function startCamera() {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }
+    });
     document.getElementById('cameraFeed').srcObject = stream;
     document.getElementById('authBtn').disabled = false;
   } catch(e) {
@@ -71,18 +85,31 @@ function setStatus(type, msg) {
 
 function showMetrics(conf, qual) {
   document.getElementById('metricsRow').style.display = 'flex';
-  document.getElementById('confBar').style.width = (conf * 100) + '%';
+  document.getElementById('confBar').style.width = (conf * 100).toFixed(1) + '%';
   document.getElementById('confVal').textContent = (conf * 100).toFixed(1) + '%';
-  document.getElementById('qualBar').style.width = (qual * 100) + '%';
+  document.getElementById('qualBar').style.width = (qual * 100).toFixed(1) + '%';
   document.getElementById('qualVal').textContent = (qual * 100).toFixed(1) + '%';
+}
+
+function showLivenessMetric(score) {
+  if (score === undefined || score === null) return;
+  document.getElementById('livenessMetricRow').style.display = 'flex';
+  document.getElementById('livenessBar').style.width = (score * 100).toFixed(1) + '%';
+  document.getElementById('livenessVal').textContent = (score * 100).toFixed(1) + '%';
+}
+
+function resetOverlay() {
+  document.getElementById('faceOverlay').className = 'face-overlay';
 }
 
 document.getElementById('authBtn').addEventListener('click', async () => {
   if (busy) return;
   busy = true;
+
   const btn = document.getElementById('authBtn');
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Обработка…';
   btn.disabled = true;
+  resetOverlay();
 
   const video = document.getElementById('cameraFeed');
   const canvas = document.getElementById('snapshot');
@@ -98,23 +125,52 @@ document.getElementById('authBtn').addEventListener('click', async () => {
       body: JSON.stringify({ username: USERNAME, image_data: imageData })
     });
     const data = await resp.json();
+
     showMetrics(data.recognition_confidence || 0, data.quality_score || 0);
+
+    // Успех
     if (data.success) {
       document.getElementById('faceOverlay').className = 'face-overlay good';
       if (stream) stream.getTracks().forEach(t => t.stop());
       setStatus('success', '<i class="bi bi-check-circle me-1"></i>Аутентификация успешна! Перенаправление…');
       setTimeout(() => window.location.href = data.redirect_url || '/accounts/success/', 1500);
-    } else {
+      return;
+    }
+
+    // Провал проверки живости
+    if (data.liveness_failed) {
+      showLivenessMetric(data.liveness_score);
       document.getElementById('faceOverlay').className = 'face-overlay bad';
-      let msg = '<i class="bi bi-x-circle me-1"></i>' + data.error;
-      if (data.attempts_left !== undefined && data.attempts_left > 0) {
-        msg += ` <span class="text-muted">(осталось попыток: ${data.attempts_left})</span>`;
+
+      // require_active_liveness=true — флаг для будущего модуля активной проверки.
+      // Сейчас просто сообщаем пользователю и даём повторить.
+      if (data.require_active_liveness) {
+        setStatus('warning',
+          '<i class="bi bi-shield-exclamation me-1"></i>' +
+          '<strong>Проверка живости не пройдена.</strong> ' +
+          'Убедитесь, что хорошо освещены, смотрите прямо в камеру и попробуйте ещё раз.'
+        );
+      } else {
+        setStatus('warning', '<i class="bi bi-eye me-1"></i>' + (data.error || 'Проверка живости не пройдена.'));
       }
-      setStatus('danger', msg);
+
       btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
       btn.disabled = false;
       busy = false;
+      return;
     }
+
+    // Прочие ошибки
+    document.getElementById('faceOverlay').className = 'face-overlay bad';
+    let msg = '<i class="bi bi-x-circle me-1"></i>' + (data.error || 'Ошибка аутентификации');
+    if (data.attempts_left !== undefined && data.attempts_left > 0) {
+      msg += ` <span class="text-muted">(осталось попыток: ${data.attempts_left})</span>`;
+    }
+    setStatus('danger', msg);
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Попробовать снова';
+    btn.disabled = false;
+    busy = false;
+
   } catch(e) {
     setStatus('danger', 'Ошибка сети: ' + e.message);
     btn.innerHTML = '<i class="bi bi-person-check me-1"></i>Подтвердить личность';

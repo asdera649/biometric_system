@@ -4,118 +4,322 @@
 <div class="page-header">
   <h1><i class="bi bi-gear me-2 text-primary"></i>Настройки системы</h1>
 </div>
+
+<form method="post" novalidate id="settingsForm">
+{% csrf_token %}
 <div class="row g-3">
+
+  <!-- Левая колонка: формы -->
   <div class="col-lg-7">
-    <div class="card">
-      <div class="card-header">Параметры аутентификации</div>
+
+    <!-- Распознавание лица -->
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-person-check me-1 text-primary"></i>Распознавание лица
+      </div>
       <div style="padding:1.5rem">
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Порог распознавания лица</label>
-            <div class="d-flex align-items-center gap-3">
-              <input type="range" name="recognition_threshold" min="0.1" max="1.0" step="0.01"
-                     value="{{ cfg.recognition_threshold|floatformat:2 }}" class="form-range flex-grow-1" id="recSlider"
-                     autocomplete="off"
-                     oninput="updateRecVal(this.value)">
-              <span id="recVal" class="fw-bold" style="min-width:60px;color:#1a56db">{{ cfg.recognition_threshold|floatformat:2 }}%</span>
-            </div>
-            <div class="text-muted small">Минимальная косинусная схожесть для успешной аутентификации. Рекомендуется: 60–75%.</div>
-            {% if errors.recognition_threshold %}<div class="text-danger small">{{ errors.recognition_threshold }}</div>{% endif %}
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Порог распознавания лица</label>
+          <div class="d-flex align-items-center gap-3">
+            <input type="range" name="recognition_threshold" min="0.1" max="1.0" step="0.01"
+                   value="{{ cfg.recognition_threshold }}"
+                   class="form-range flex-grow-1" id="recSlider" autocomplete="off"
+                   oninput="syncSlider('recSlider','recVal','recInput',100,'%')">
+            <input type="number" id="recInput" min="10" max="100" step="1"
+                   value="{% widthratio cfg.recognition_threshold 1 100 %}"
+                   class="form-control form-control-sm text-center fw-bold"
+                   style="width:72px;color:#1a56db"
+                   oninput="syncInput('recSlider','recVal','recInput',100,'%')">
+            <span id="recVal" style="display:none"></span>
           </div>
-
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Порог качества изображения</label>
-            <div class="d-flex align-items-center gap-3">
-              <input type="range" name="quality_threshold" min="0.0" max="1.0" step="0.01"
-                     value="{{ cfg.quality_threshold|floatformat:2 }}" class="form-range flex-grow-1" id="qualSlider"
-                     autocomplete="off"
-                     oninput="updateQualVal(this.value)">
-              <span id="qualVal" class="fw-bold" style="min-width:60px;color:#059669">{{ cfg.quality_threshold|floatformat:2 }}%</span>
-            </div>
-            <div class="text-muted small">Минимальное качество кадра для обработки. Рекомендуется: 30–50%.</div>
-            {% if errors.quality_threshold %}<div class="text-danger small">{{ errors.quality_threshold }}</div>{% endif %}
+          <div class="text-muted small mt-1">
+            Минимальная косинусная схожесть для успешной аутентификации. Рекомендуется: 60-75%.
           </div>
+          {% if errors.recognition_threshold %}<div class="text-danger small mt-1">{{ errors.recognition_threshold }}</div>{% endif %}
+        </div>
 
-          <hr>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Макс. неудачных попыток</label>
-              <input type="number" name="max_auth_attempts" value="{{ cfg.max_auth_attempts }}" min="1" max="20" class="form-control">
-              <div class="text-muted small mt-1">После превышения — автоблокировка.</div>
-              {% if errors.max_auth_attempts %}<div class="text-danger small">{{ errors.max_auth_attempts }}</div>{% endif %}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Время блокировки (мин)</label>
-              <input type="number" name="lockout_minutes" value="{{ cfg.lockout_minutes }}" min="1" max="1440" class="form-control">
-              <div class="text-muted small mt-1">Длительность автоматической блокировки.</div>
-              {% if errors.lockout_minutes %}<div class="text-danger small">{{ errors.lockout_minutes }}</div>{% endif %}
-            </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Порог качества изображения</label>
+          <div class="d-flex align-items-center gap-3">
+            <input type="range" name="quality_threshold" min="0.0" max="1.0" step="0.01"
+                   value="{{ cfg.quality_threshold }}"
+                   class="form-range flex-grow-1" id="qualSlider" autocomplete="off"
+                   oninput="syncSlider('qualSlider','qualVal','qualInput',100,'%')">
+            <input type="number" id="qualInput" min="0" max="100" step="1"
+                   value="{% widthratio cfg.quality_threshold 1 100 %}"
+                   class="form-control form-control-sm text-center fw-bold"
+                   style="width:72px;color:#059669"
+                   oninput="syncInput('qualSlider','qualVal','qualInput',100,'%')">
+            <span id="qualVal" style="display:none"></span>
           </div>
-
-          <hr>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" name="liveness_enabled" id="livenessSwitch" {% if cfg.liveness_enabled %}checked{% endif %} disabled>
-            <label class="form-check-label" for="livenessSwitch">Детекция живости включена</label>
+          <div class="text-muted small mt-1">
+            Минимальное качество кадра для обработки. Рекомендуется: 30-50%.
           </div>
+          {% if errors.quality_threshold %}<div class="text-danger small mt-1">{{ errors.quality_threshold }}</div>{% endif %}
+        </div>
 
-          <hr>
+        <hr>
 
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Макс. неудачных попыток</label>
+            <input type="number" name="max_auth_attempts"
+                   value="{{ cfg.max_auth_attempts }}" min="1" max="20" class="form-control">
+            <div class="text-muted small mt-1">После превышения - автоблокировка аккаунта.</div>
+            {% if errors.max_auth_attempts %}<div class="text-danger small mt-1">{{ errors.max_auth_attempts }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Время блокировки (мин)</label>
+            <input type="number" name="lockout_minutes"
+                   value="{{ cfg.lockout_minutes }}" min="1" max="1440" class="form-control">
+            <div class="text-muted small mt-1">Длительность автоматической блокировки.</div>
+            {% if errors.lockout_minutes %}<div class="text-danger small mt-1">{{ errors.lockout_minutes }}</div>{% endif %}
+          </div>
+        </div>
 
-          <button type="submit" class="btn btn-primary px-4">
-            <i class="bi bi-save me-1"></i>Сохранить настройки
-          </button>
-        </form>
       </div>
     </div>
-  </div>
-  <div class="col-lg-5">
+
+    <!-- Пассивная проверка живости -->
     <div class="card mb-3">
-      <div class="card-header">Текущие значения</div>
+      <div class="card-header d-flex align-items-center justify-content-between fw-semibold">
+        <div>
+          <i class="bi bi-eye me-1" style="color:#7c3aed"></i>Пассивная проверка живости
+          <span class="badge badge-{% if cfg.liveness_enabled %}success{% else %}secondary{% endif %} ms-2" id="livenessBadge">
+            {% if cfg.liveness_enabled %}Включена{% else %}Выключена{% endif %}
+          </span>
+        </div>
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch"
+                 name="liveness_enabled" id="livenessSwitch"
+                 {% if cfg.liveness_enabled %}checked{% endif %}
+                 {% if not liveness_status.available %}
+                   disabled title="Переключатель недоступен: сервис не загружен"
+                 {% endif %}
+                 onchange="onLivenessToggle(this.checked)">
+        </div>
+      </div>
+      <div style="padding:1.5rem">
+
+        <!-- Статус сервиса -->
+        {% if liveness_status.available %}
+          <div class="d-flex align-items-center gap-2 mb-3 p-2 rounded" style="background:#f0fdf4;border:1px solid #bbf7d0">
+            <div style="width:8px;height:8px;border-radius:50%;background:#059669;flex-shrink:0"></div>
+            <span class="small fw-semibold text-success">Сервис доступен</span>
+
+          </div>
+        {% elif liveness_status %}
+          <div class="alert alert-danger py-2 small mb-3">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            <strong>Сервис недоступен:</strong> {{ liveness_status.error }}
+          </div>
+        {% else %}
+          <div class="alert alert-secondary py-2 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Модуль не инициализирован. Проверьте settings.py.
+          </div>
+        {% endif %}
+
+        <!-- Настройки живости -->
+        <div id="livenessSection" {% if not cfg.liveness_enabled %}style="display:none"{% endif %}>
+
+          {% if not liveness_status.available %}
+          <div class="alert alert-warning py-2 small mb-3">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Включить невозможно: модели не загружены.
+            Убедитесь что <code>.pth</code> файлы есть в <code>resources/anti_spoof_models/</code>.
+          </div>
+          {% endif %}
+
+          <div class="mb-0">
+            <label class="form-label fw-semibold">Порог уверенности живости</label>
+            <div class="d-flex align-items-center gap-3">
+              <input type="range" name="liveness_threshold" min="0.0" max="1.0" step="0.01"
+                     value="{{ cfg.liveness_threshold }}"
+                     class="form-range flex-grow-1" id="liveSlider" autocomplete="off"
+                     oninput="syncSlider('liveSlider','liveVal','liveInput',100,'%')">
+              <input type="number" id="liveInput" min="0" max="100" step="1"
+                     value="{% widthratio cfg.liveness_threshold 1 100 %}"
+                     class="form-control form-control-sm text-center fw-bold"
+                     style="width:72px;color:#7c3aed"
+                     oninput="syncInput('liveSlider','liveVal','liveInput',100,'%')">
+              <span id="liveVal" style="display:none"></span>
+            </div>
+            <div class="text-muted small mt-1">
+              Минимальная уверенность модели, что перед камерой живой человек.
+              Рекомендуется: 50-70%. Слишком высокое значение даёт ложные отказы на легальных пользователях.
+            </div>
+            {% if errors.liveness_threshold %}<div class="text-danger small mt-1">{{ errors.liveness_threshold }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Активная проверка (заглушка) -->
+    <div class="card mb-3" style="border:2px dashed #e2e8f0;opacity:.65">
+      <div class="card-header text-muted fw-semibold">
+        <i class="bi bi-shield-exclamation me-1"></i>Активная проверка живости
+        <span class="badge badge-secondary ms-1" style="font-size:.65rem">В разработке</span>
+      </div>
+      <div style="padding:1rem">
+        <div class="text-muted small">
+          Активная проверка запускается автоматически, если пассивная не пройдена.
+          Настройки появятся после подключения модуля.
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary px-5 py-2">
+      <i class="bi bi-save me-1"></i>Сохранить настройки
+    </button>
+
+  </div>
+
+  <!-- Правая колонка: справка -->
+  <div class="col-lg-5">
+
+    <!-- Текущие значения -->
+    <div class="card mb-3">
+      <div class="card-header fw-semibold"><i class="bi bi-sliders me-1"></i>Текущие значения</div>
       <div style="padding:1rem">
         <table class="table table-sm small mb-0">
-          <tr><td class="text-muted">Порог распознавания</td><td class="fw-bold">{{ cfg.recognition_threshold|floatformat:2 }}</td></tr>
-          <tr><td class="text-muted">Порог качества</td><td class="fw-bold">{{ cfg.quality_threshold|floatformat:2 }}</td></tr>
-          <tr><td class="text-muted">Порог живости</td><td class="fw-bold text-muted">{{ cfg.liveness_threshold|floatformat:2 }} (заглушка)</td></tr>
-          <tr><td class="text-muted">Макс. попыток</td><td class="fw-bold">{{ cfg.max_auth_attempts }}</td></tr>
-          <tr><td class="text-muted">Блокировка</td><td class="fw-bold">{{ cfg.lockout_minutes }} мин</td></tr>
-          <tr><td class="text-muted">Обновлено</td><td class="fw-bold">{{ cfg.updated_at|date:"d.m.Y H:i" }}</td></tr>
+          <tbody>
+            <tr>
+              <td class="text-muted">Порог распознавания</td>
+              <td class="fw-bold text-end">
+                {{ cfg.recognition_threshold|floatformat:2 }}
+                <span class="text-muted">({% widthratio cfg.recognition_threshold 1 100 %}%)</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="text-muted">Порог качества</td>
+              <td class="fw-bold text-end">
+                {{ cfg.quality_threshold|floatformat:2 }}
+                <span class="text-muted">({% widthratio cfg.quality_threshold 1 100 %}%)</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="text-muted">Макс. попыток</td>
+              <td class="fw-bold text-end">{{ cfg.max_auth_attempts }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Блокировка</td>
+              <td class="fw-bold text-end">{{ cfg.lockout_minutes }} мин</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Порог живости</td>
+              <td class="fw-bold text-end">
+                {{ cfg.liveness_threshold|floatformat:2 }}
+                <span class="text-muted">({% widthratio cfg.liveness_threshold 1 100 %}%)</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="text-muted">Проверка живости</td>
+              <td class="text-end">
+                {% if cfg.liveness_enabled %}
+                  <span class="badge badge-success"><i class="bi bi-check me-1"></i>Включена</span>
+                {% else %}
+                  <span class="badge badge-secondary">Выключена</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td class="text-muted">Обновлено</td>
+              <td class="fw-bold text-end text-muted">{{ cfg.updated_at|date:"d.m.Y H:i" }}</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Детали сервиса живости -->
     <div class="card">
-      <div class="card-header">Архитектура системы</div>
-      <div style="padding:1rem;font-size:.82rem"></div>
+      <div class="card-header fw-semibold">
+        <i class="bi bi-eye me-1" style="color:#7c3aed"></i>Сервис живости - детали
+      </div>
+      <div style="padding:1rem">
+        {% if liveness_status.available %}
+          <table class="table table-sm small mb-3">
+            <tr>
+              <td class="text-muted">Устройство</td>
+              <td class="fw-bold">
+                {% if 'cuda' in liveness_status.device %}
+                  <span class="badge badge-info"><i class="bi bi-gpu-card me-1"></i>{{ liveness_status.device }}</span>
+                {% else %}
+                  <span class="badge badge-secondary"><i class="bi bi-cpu me-1"></i>CPU</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td class="text-muted">Моделей загружено</td>
+              <td class="fw-bold">{{ liveness_status.models_count }}</td>
+            </tr>
+          </table>
+
+        {% elif liveness_status %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <div style="width:8px;height:8px;border-radius:50%;background:#dc2626;flex-shrink:0"></div>
+            <span class="fw-semibold text-danger small">Сервис недоступен</span>
+          </div>
+          <p class="text-muted small mb-2">{{ liveness_status.error }}</p>
+
+        {% else %}
+          <div class="text-muted small">
+            Модуль не инициализирован.
+          </div>
+        {% endif %}
+      </div>
     </div>
+
   </div>
 </div>
+</form>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-  function updateRecVal(val) {
-    document.getElementById('recVal').textContent = (val * 100).toFixed(0) + '%';
+  // Синхронизация слайдер → числовое поле
+  function syncSlider(sliderId, hiddenId, inputId, mult, suffix) {
+    const val = parseFloat(document.getElementById(sliderId).value);
+    document.getElementById(inputId).value = Math.round(val * mult);
   }
 
-  function updateQualVal(val) {
-    document.getElementById('qualVal').textContent = (val * 100).toFixed(0) + '%';
+  // Синхронизация числовое поле → слайдер
+  function syncInput(sliderId, hiddenId, inputId, mult, suffix) {
+    const input = document.getElementById(inputId);
+    let v = parseFloat(input.value) || 0;
+    v = Math.max(parseFloat(document.getElementById(sliderId).min) * mult,
+                 Math.min(parseFloat(document.getElementById(sliderId).max) * mult, v));
+    document.getElementById(sliderId).value = v / mult;
+    input.value = Math.round(v);
   }
 
-  window.addEventListener('load', function() {
-    var rSlider = document.getElementById('recSlider');
-    if (rSlider) {
-      var rawValue = "{{ cfg.recognition_threshold|floatformat:2 }}".replace(',', '.');
-      rSlider.value = rawValue;
-      updateRecVal(rawValue);
-      rSlider.blur();
-    }
+  // Показать/скрыть секцию liveness + поменять бейдж
+  function onLivenessToggle(enabled) {
+    document.getElementById('livenessSection').style.display = enabled ? '' : 'none';
+    const badge = document.getElementById('livenessBadge');
+    badge.textContent = enabled ? 'Включена' : 'Выключена';
+    badge.className = 'badge badge-' + (enabled ? 'success' : 'secondary') + ' ms-2';
+  }
 
-    var qSlider = document.getElementById('qualSlider');
-    if (qSlider) {
-      var qValue = "{{ cfg.quality_threshold|floatformat:2 }}".replace(',', '.');
-      qSlider.value = qValue;
-      updateQualVal(qValue);
-      qSlider.blur();
-    }
+  // При загрузке: инициализировать числовые поля из значений слайдеров
+  window.addEventListener('load', function () {
+    [
+      ['recSlider',  'recVal',  'recInput',  100],
+      ['qualSlider', 'qualVal', 'qualInput', 100],
+      ['liveSlider', 'liveVal', 'liveInput', 100],
+    ].forEach(([sid, vid, iid, mult]) => {
+      const slider = document.getElementById(sid);
+      const input  = document.getElementById(iid);
+      if (!slider || !input) return;
+      // Нормализуем float из Django (может прийти "0,65" в некоторых локалях)
+      const raw = slider.getAttribute('value').replace(',', '.');
+      slider.value = raw;
+      input.value = Math.round(parseFloat(raw) * mult);
+      slider.blur();
+    });
   });
 </script>
 {% endblock %}
